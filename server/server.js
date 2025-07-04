@@ -25,14 +25,12 @@ const db = mysql.createConnection({
 });
 
 //app.use('/api/auth', require('./routes/authentication'));
-const rewardsRoute = require('./routes/rewards');
-app.use('/rewards', rewardsRoute);
+
+app.use('/rewards', require('./routes/rewards'));
 app.use('/', require('./routes/authentication'));
-
-
 const PORT = process.env.PORT;
 
-app.listen(5002, () => {
+app.listen(5005, () => {
 
   console.log('Server is running on port 5002');
 })
