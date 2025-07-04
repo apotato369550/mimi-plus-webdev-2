@@ -3,7 +3,8 @@ const rewardsController = require('../controllers/rewardsController');
 
 const router = express.Router();
 
-router.get('/rewards', rewardsController.viewRewards);
+router.get('/', rewardsController.viewRewards);
+
 module.exports = router;
 
 
