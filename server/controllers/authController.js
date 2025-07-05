@@ -1,20 +1,21 @@
 const mysql = require("mysql");
 const express = require("express");
-const bcrypt = require("bcryptjs");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 const db = mysql.createConnection({
 
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME
+  database: process.env.DB_DATABASE
 
 
 });
 
 
 
-exports.register = (req, res) => {
+exports.register = async (req, res) => {
 
 
   const { name, email, password } = req.body;
@@ -26,7 +27,7 @@ exports.register = (req, res) => {
 
   }
 
-  db.query("SELECT * FROM customers WHERE email = ? ", [email], (err, results) => {
+  db.query("SELECT * FROM customers WHERE email = ? ", [email], async (err, results) => {
 
     if(err) {
       console.error("Database query error:", err);
@@ -38,52 +39,71 @@ exports.register = (req, res) => {
       return res.status(409).json({message: "Email already exists"});
 
     }
+    
 
-    const hashedPassword = bcrypt.hash(password, 11);
+    try {
+    
+      const hashedPassword = await bcrypt.hash(password, 10);
+      db.query("INSERT INTO customers (name, email, password) VALUES (?, ?, ?)", [name, email, hashedPassword], (err, results) => {
 
+        if (err) {
+          console.error("Insert error:", err);
+          return res.status(500).json({ message: "Database error"});
 
-    db.query("INSERT INTO customers (name, email, password) VALUES ( ?, ?, ?)", [name, email, password] ,(err, results) => {
+        }
 
-      if (err) {
-        console.error("Database insertion error:", err);
-        return res.status(500).json({ message: "Database error"});
-      } else {
+        res.status(201).json({ message: "User registered successfully"});
+      })
+    } catch (hashError) {
+      console.error("Hashing error:", hashError);
+      return res.status(500).json({ message: "Error hashing password"});
+    }
 
-        return res.status(201).json({ message: "User registered successfully"});
+    
+    });
 
-      }
-    })
-  })
 }
+
+
+
+
 
 exports.login = (req, res) => {
-
- const { email, password } = req.body;
+  const { email, password } = req.body;
 
   if (!email || !password) {
-    return res.status(400).json({message: "All fields are required"});
+    return res.status(400).json({ message: 'Please provide email and password.' });
   }
 
-   db.query("SELECT *FROM customers WHERE email = ?", [email], (err, results) => {
-    
-    if(err) {
-      console.error("Database qeury error:", err);
-      return res.status(500).json({ message: "Database error"});
+  // Find user by email
+  db.query('SELECT * FROM customers WHERE email = ?', [email], async (err, results) => {
+    if (err) {
+      console.error('DB error:', err);
+      return res.status(500).json({ message: 'Database error' });
     }
-    if(results.length > 0) {
 
-      const user = results[0];
-
-      bcrypt.compare(password, user.password, (err, isMatch) => {
-        
-        if (err) {
-          console.error("Password comparison error:", err);
-          return res.status(500).json({ message: "Error comparing passwords"});
-        }
-      })
+    if (results.length === 0) {
+      return res.status(401).json({ message: 'Invalid email or password' });
     }
-   }) 
-}
 
+    const user = results[0];
 
+        const isMatch = await bcrypt.compare(password, user.password);
 
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid email or password' });
+    }
+
+      const token = jwt.sign(
+      { id: user.id, email: user.email }, // payload
+      process.env.JWT_SECRET,             // secret key
+      { expiresIn: '1h' }                 // 1 hour expiry
+    );
+
+    // ✅ Send the token
+    res.status(200).json({
+      message: 'Login successful!',
+      token: token
+    });
+  });
+};
