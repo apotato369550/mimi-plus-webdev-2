@@ -2,15 +2,8 @@ const express = require("express");
 const mysql = require("mysql");
 
 
-const db = mysql.createConnection({
+const db = require("../database/dbconn.js");
 
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_DATABASE
-
-
-});
 
 const queryAsync = (sql, params) => {
   return new Promise((resolve, reject) => {
@@ -25,14 +18,38 @@ const queryAsync = (sql, params) => {
 exports.viewRewards = async (req, res) => {
   
   try {
-    const query = 'SELECT * FROM rewards';
+    
+    const customerID = req.user.customerID;
+    const { category } = req.query;
 
-    const rewards = await queryAsync(query);
+    //console.log("customer:", req.user);
+
+    const userPoints = await queryAsync('SELECT pointsBalance FROM customers WHERE customerID = ?', [customerID]);
+
+    if (userPoints.length === 0) {
+
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const points = userPoints[0];//Customers Points
+    
+    let rewardsQuery = 'SELECT * FROM rewards WHERE isActive = "active"';
+    let params = [];
+   
+    if(category) {
+
+      rewardsQuery += ' AND category = ?';
+      params.push(category);
+    }
+    
+    const rewards = await queryAsync(rewardsQuery, params); 
+
 
     res.status(200).json({
 
-      message: "Rewards retrieved successfully",
-      data: rewards
+      message: category ? `Rewards for category: ${category}` : 'All rewards',
+      points: points,
+      rewards: rewards
     });
 
   }catch (error) {
