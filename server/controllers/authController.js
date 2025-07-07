@@ -3,16 +3,7 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
-const db = mysql.createConnection({
-
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_DATABASE
-
-
-});
-
+const db = require("../database/dbconn.js");
 
 
 exports.register = async (req, res) => {
@@ -87,23 +78,27 @@ exports.login = (req, res) => {
     }
 
     const user = results[0];
-
+    console.log("user:", user);
         const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
+    
+    const payload = {
+      customerID: user.customerID,
+      email: user.email,
+      name: user.name
+    };
 
-      const token = jwt.sign(
-      { id: user.id, email: user.email }, // payload
-      process.env.JWT_SECRET,             // secret key
-      { expiresIn: '1h' }                 // 1 hour expiry
-    );
+    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-    // ✅ Send the token
-    res.status(200).json({
+
+
+      res.status(200).json({
       message: 'Login successful!',
+      customerID: user.customerID,
       token: token
-    });
+      });
   });
 };
