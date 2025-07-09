@@ -59,3 +59,45 @@ exports.viewRewards = async (req, res) => {
 
   }
 };
+
+exports.redeemReward = async (req, res) => {
+  
+  const customerID = req.user.customerID;
+  const { rewardID } = req.body;
+  try {
+  
+    const userPoints = await queryAsync('SELECT pointsBalance FROM customers WHERE customerID = ?', [customerID]);
+
+    if (userPoints.length === 0) {
+      return res.status(404).json({ message: 'User not found'});
+    }
+
+    const points = userPoints[0].pointsBalance;
+    console.log('points:', points);
+
+    const rewardRow = await queryAsync('SELECT * FROM rewards WHERE rewardID = ? AND isActive = "active"', [rewardID]);
+    
+
+    if(rewardRow.length === 0) {
+      return res.status(404).json({ message: 'Reward not found or inactive'});
+    }
+    
+    const rewardCost = rewardRow[0].pointsRequired;
+
+    if (points < rewardCost) {
+      return res.status(400).json({ message: 'Insufficient points for this reward'});
+    }
+    //After redeeming reward it will go to pending
+    //await queryAsync('UPDATE customers SET pointsBalance = pointsBalance - ? WHERE customerID = ?', [rewardCost, customerID]);
+
+    await queryAsync('INSERT INTO redemption (customerID, rewardID, dateRedeemed, pointsUsed, redeemStatus) VALUES (?, ?, NOW(), ?, ?)', [customerID, rewardID, rewardCost, 'pending']);
+    
+    res.status(200).json({ message: 'Reward added to pending'});
+
+  } catch(error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error redeeming reward ', error: error.message});
+    
+  }
+
+};
