@@ -1,9 +1,9 @@
-const express = require("express");
-const mysql = require("mysql");
+const express = require('express');
+const mysql = require('mysql');
+const QRCode = require('qrcode');
 
 
 const db = require("../database/dbconn.js");
-
 
 const queryAsync = (sql, params) => {
   return new Promise((resolve, reject) => {
@@ -15,55 +15,66 @@ const queryAsync = (sql, params) => {
 };
 
 
-exports.viewRewards = async (req, res) => {
-  
+
+
+exports.viewHome = async (req, res) => {
+
   try {
-    
+
     const customerID = req.user.customerID;
-    const { category } = req.query;
+     
+  
 
-    //console.log("customer:", req.user);
+    const userResult = await queryAsync('SELECT pointsBalance, totalEarnedLifetime, totalRedeemedLifetime FROM customers WHERE customerID = ?', [customerID]);
 
-    const userPoints = await queryAsync('SELECT pointsBalance FROM customers WHERE customerID = ?', [customerID]);
+    
+    const pointsAvailable = userResult[0].pointsBalance;
+    const totalEarnedLifetime = userResult[0]. totalEarnedLifetime;
+    const totalRedeemedLifetime = userResult[0].totalRedeemedLifetime
 
-    if (userPoints.length === 0) {
 
-      return res.status(404).json({ message: 'User not found' });
+    
+    
+    if(userResult.length === 0){
+    
+      return res.status(404).json({message: 'Customer not found'});
+      
     }
 
-    const points = userPoints[0];//Customers Points
+    const quickRewards = await queryAsync('SELECT * FROM rewards LIMIT 6');
     
-    let rewardsQuery = 'SELECT * FROM rewards WHERE isActive = "active"';
-    let params = [];
-   
-    if(category) {
 
-      rewardsQuery += ' AND category = ?';
-      params.push(category);
-    }
+
+    const points = userResult[0];
     
-    const rewards = await queryAsync(rewardsQuery, params); 
-
 
     res.status(200).json({
 
-      message: category ? `Rewards for category: ${category}` : 'All rewards',
-      points: points,
-      rewards: rewards
+      pointsAvailable,
+      totalEarnedLifetime,
+      totalRedeemedLifetime,
+      quickRewards
+      
     });
+  } catch(error) {
 
-  }catch (error) {
 
+    console.log(error);
+    res.status(500).json({
 
-    res.status(500).json({ message: "Error retrieving rewards", error: error.message})
+      message: 'Error fetching home page data',
+      error: error.message
+    })
+
 
   }
 };
 
-exports.redeemReward = async (req, res) => {
-  
+exports.quickRedeem = async (req, res) => {
+
   const customerID = req.user.customerID;
   const { rewardID } = req.body;
+
   try {
   
     const userPoints = await queryAsync('SELECT pointsBalance FROM customers WHERE customerID = ?', [customerID]);
@@ -73,7 +84,7 @@ exports.redeemReward = async (req, res) => {
     }
 
     const points = userPoints[0].pointsBalance;
-    console.log('points:', points);
+    //console.log('points:', points);
 
     const rewardRow = await queryAsync('SELECT * FROM rewards WHERE rewardID = ? AND isActive = "active"', [rewardID]);
     
@@ -100,4 +111,5 @@ exports.redeemReward = async (req, res) => {
     
   }
 
-};
+}
+
