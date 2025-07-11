@@ -5,14 +5,7 @@ const QRCode = require('qrcode');
 
 const db = require("../database/dbconn.js");
 
-const queryAsync = (sql, params) => {
-  return new Promise((resolve, reject) => {
-    db.query(sql, params, (err, results) => {
-      if (err) return reject(err);
-      resolve(results);
-    });
-  });
-};
+const { queryAsync } = require("../database/utils");
 
 
 
