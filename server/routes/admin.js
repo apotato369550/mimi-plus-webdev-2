@@ -7,6 +7,10 @@ const verifyToken = require('../middleware/authMiddleware');
 
 const adminController = require('../controllers/adminController');
 
+/******************************************************************
+ *                       Admin Routes                            
+ ******************************************************************/
+
 router.get('/', verifyToken.authenticateToken, verifyToken.adminVerify, adminController.adminDashboard);
 router.get('/customers', verifyToken.authenticateToken, verifyToken.adminVerify, adminController.viewAllCustomers);
 router.delete('/customers/:id', verifyToken.authenticateToken, verifyToken.adminVerify, adminController.deleteCustomer);

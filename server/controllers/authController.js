@@ -7,6 +7,10 @@ const nodemailer = require('nodemailer');
 const QRCode = require('qrcode');
 const db = require("../database/dbconn.js");
 
+/******************************************************************
+ *             Registration, Verification, Login Logic                            
+ ******************************************************************/
+
 
 exports.register = async (req, res) => {
   const { name, email, password } = req.body;

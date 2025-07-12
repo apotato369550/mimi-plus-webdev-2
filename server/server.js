@@ -6,7 +6,9 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 
 
-
+/*******************************************************************
+ *                     All predefined routes                                 *
+ *******************************************************************/
 
 app.use(cors());
 app.use(express.json());
