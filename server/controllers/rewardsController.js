@@ -5,6 +5,12 @@ const mysql = require("mysql");
 const db = require("../database/dbconn.js");
 const { queryAsync } = require("../database/utils");
 
+
+/******************************************************************
+ *                       View Rewards on Customer Page                            
+ ******************************************************************/
+
+
 exports.viewRewards = async (req, res) => {
   
   try {
@@ -49,6 +55,11 @@ exports.viewRewards = async (req, res) => {
 
   }
 };
+
+
+/******************************************************************
+ *                       Reedem Reward on Rewards Page                            
+ ******************************************************************/
 
 exports.redeemReward = async (req, res) => {
   

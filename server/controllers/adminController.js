@@ -3,7 +3,9 @@ const db = require('../database/dbconn');
 
 const { queryAsync } = require("../database/utils");
 
-
+/******************************************************************
+ *                       Admin Dashboard                            
+ ******************************************************************/
 
 exports.adminDashboard = async (req, res) => {
 
@@ -38,6 +40,13 @@ exports.adminDashboard = async (req, res) => {
 
   }
 };
+
+
+
+/******************************************************************
+ *                       View All Customers                            
+ ******************************************************************/
+
 
 exports.viewAllCustomers = async (req, res) => {
 
@@ -95,7 +104,10 @@ exports.deleteCustomer = async (req, res) => {
   
 }
 
-//ViewAllRewards
+/******************************************************************
+ *                       View All Rewards                            
+ ******************************************************************/
+
 exports.viewAllRewards = async (req, res) =>{
 
   
@@ -121,7 +133,10 @@ exports.viewAllRewards = async (req, res) =>{
 }
 
 
-//Add Points Functionality
+/******************************************************************
+ *                     Add Points to the Customer                            
+ ******************************************************************/
+
 exports.addPoints = async (req, res) => {
 
  const customerID = req.params.customerID;
@@ -157,6 +172,10 @@ exports.addPoints = async (req, res) => {
   }
 
 }
+
+/******************************************************************
+ *                       After scanning the QR Code                          
+ ******************************************************************/
 
 exports.viewCustomerPage = async(req, res) => {
 
