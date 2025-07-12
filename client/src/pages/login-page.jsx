@@ -6,10 +6,10 @@ import Content from './components/Content.jsx';
 function App() {
   return (
     <>
-    <AuthHeader />
-    <Content>
-    <AuthForm variant='signup'/>
-    </Content>
+      <AuthHeader />
+      <Content>
+      <AuthForm variant='login'/>
+      </Content>
     </>
   )
 }
