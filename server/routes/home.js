@@ -4,6 +4,9 @@ const verifyToken = require('../middleware/authMiddleware');
 const router = express.Router();
 
 
+/******************************************************************
+ *                       Home Page Routes                            
+ ******************************************************************/
 
 
 router.get('/', verifyToken.authenticateToken, homeController.viewHome);

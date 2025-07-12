@@ -7,6 +7,10 @@ const nodemailer = require('nodemailer');
 const QRCode = require('qrcode');
 const db = require("../database/dbconn.js");
 
+/******************************************************************
+ *             Registration, Verification, Login Logic                            
+ ******************************************************************/
+
 
 exports.register = async (req, res) => {
   const { name, email, password } = req.body;
@@ -161,17 +165,18 @@ exports.login = (req, res) => {
     const payload = {
       customerID: user.customerID,
       email: user.email,
-      name: user.name
+      name: user.name,
+      role: user.role
     };
 
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
 
 
-
       res.status(200).json({
       message: 'Login successful!',
       customerID: user.customerID,
-      token: token
+      token: token,
+      role: user.role
       });
   });
 };

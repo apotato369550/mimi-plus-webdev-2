@@ -27,3 +27,14 @@ exports.authenticateToken = (req, res, next) => {
     next();
   });
 };
+
+
+exports.adminVerify = (req, res, next) => {
+
+
+  if (req.user && req.user.role === 'admin'){
+    next();
+  } else {
+    return res.status(403).json({ message: "Access Denied: Admins Only"});
+  }
+}

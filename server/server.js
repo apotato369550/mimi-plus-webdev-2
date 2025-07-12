@@ -6,12 +6,16 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 
 
-
+/*******************************************************************
+ *                     All predefined routes                                 *
+ *******************************************************************/
 
 app.use(cors());
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+
+app.use('/admin', require('./routes/admin'));
 app.use('/home', require('./routes/home'));
 app.use('/transactions', require('./routes/transactions'));
 app.use('/rewards', require('./routes/rewards'));

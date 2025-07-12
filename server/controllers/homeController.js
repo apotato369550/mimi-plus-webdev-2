@@ -5,15 +5,16 @@ const QRCode = require('qrcode');
 
 const db = require("../database/dbconn.js");
 
-const queryAsync = (sql, params) => {
-  return new Promise((resolve, reject) => {
-    db.query(sql, params, (err, results) => {
-      if (err) return reject(err);
-      resolve(results);
-    });
-  });
-};
+const { queryAsync } = require("../database/utils");
 
+/******************************************************************
+ *                      Home Controllers                          *
+ ******************************************************************/
+
+
+/******************************************************************
+ *                      View Home Page                             
+ ******************************************************************/
 
 
 
@@ -70,6 +71,11 @@ exports.viewHome = async (req, res) => {
   }
 };
 
+
+/******************************************************************
+ *                      QuickRedeem                             
+ ******************************************************************/
+
 exports.quickRedeem = async (req, res) => {
 
   const customerID = req.user.customerID;
@@ -113,3 +119,13 @@ exports.quickRedeem = async (req, res) => {
 
 }
 
+
+exports.recentActivity = async(req, res) =>{
+
+const customerID = req.user.customerID;
+const { rewardID } = req.body;
+
+
+
+
+}

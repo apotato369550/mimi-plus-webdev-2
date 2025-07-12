@@ -3,16 +3,12 @@ const mysql = require("mysql");
 
 
 const db = require("../database/dbconn.js");
+const { queryAsync } = require("../database/utils");
 
 
-const queryAsync = (sql, params) => {
-  return new Promise((resolve, reject) => {
-    db.query(sql, params, (err, results) => {
-      if (err) return reject(err);
-      resolve(results);
-    });
-  });
-};
+/******************************************************************
+ *                       View Rewards on Customer Page                            
+ ******************************************************************/
 
 
 exports.viewRewards = async (req, res) => {
@@ -60,6 +56,11 @@ exports.viewRewards = async (req, res) => {
   }
 };
 
+
+/******************************************************************
+ *                       Reedem Reward on Rewards Page                            
+ ******************************************************************/
+
 exports.redeemReward = async (req, res) => {
   
   const customerID = req.user.customerID;
@@ -88,8 +89,7 @@ exports.redeemReward = async (req, res) => {
       return res.status(400).json({ message: 'Insufficient points for this reward'});
     }
     //After redeeming reward it will go to pending
-    //await queryAsync('UPDATE customers SET pointsBalance = pointsBalance - ? WHERE customerID = ?', [rewardCost, customerID]);
-
+    
     await queryAsync('INSERT INTO redemption (customerID, rewardID, dateRedeemed, pointsUsed, redeemStatus) VALUES (?, ?, NOW(), ?, ?)', [customerID, rewardID, rewardCost, 'pending']);
     
     res.status(200).json({ message: 'Reward added to pending'});
