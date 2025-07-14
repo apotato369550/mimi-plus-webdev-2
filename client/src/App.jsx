@@ -1,35 +1,30 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import HomePage from "./pages/home-page.jsx";
+import LoginPage from "./pages/login-page.jsx";
+import SignupPage from "./pages/signup-page.jsx";
+import RewardsPage from "./pages/rewards-page.jsx";
+import TransactionsPage from "./pages/transaction-page.jsx";
+import AdminDashboard from "./pages/admin-dashboard.jsx";
+import AdminCustomers from "./pages/admin-customers.jsx";
+import AdminRewards from "./pages/admin-rewards.jsx";
+import AdminTransactions from "./pages/admin-transactions.jsx";
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/rewards" element={<RewardsPage />} />
+        <Route path="/transactions" element={<TransactionsPage />} />
+        <Route path="/admindashboard" element={<AdminDashboard />} />
+        <Route path="/admincustomers" element={<AdminCustomers />} />
+        <Route path="/adminrewards" element={<AdminRewards />} />
+        <Route path="/admintransactions" element={<AdminTransactions />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
-export default App
+export default App;
