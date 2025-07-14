@@ -5,7 +5,6 @@ const dotenv = require("dotenv").config();
 const cors = require("cors");
 const bodyParser = require("body-parser");
 
-
 /*******************************************************************
  *                     All predefined routes                                 *
  *******************************************************************/
@@ -14,15 +13,14 @@ app.use(cors());
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+app.use("/api/admin", require("./routes/admin"));
+app.use("/api/home", require("./routes/home"));
+app.use("/api/transactions", require("./routes/transactions"));
+app.use("/api/rewards", require("./routes/rewards"));
+app.use("/api", require("./routes/authentication"));
 
-app.use('/admin', require('./routes/admin'));
-app.use('/home', require('./routes/home'));
-app.use('/transactions', require('./routes/transactions'));
-app.use('/rewards', require('./routes/rewards'));
-app.use('/', require('./routes/authentication'));
-const PORT = process.env.DB_PORT;
+const PORT = process.env.PORT || 5002;
 
 app.listen(PORT, () => {
-
-  console.log('Server is running on port 5002');
-})
+  console.log(`Server is running on port ${PORT}`);
+});
