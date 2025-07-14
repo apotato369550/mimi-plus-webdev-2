@@ -1,17 +1,16 @@
-import { useState } from 'react';
-import AuthForm from './components/AuthForm.jsx';
-import AuthHeader from './components/AuthHeader.jsx';
-import Content from './components/Content.jsx';
+import AuthForm from "../components/AuthForm.jsx";
+import Header from "../components/Header.jsx";
+import Content from "../components/Content.jsx";
 
 function App() {
   return (
     <>
-      <AuthHeader />
+      <Header variant="auth" />
       <Content>
-      <AuthForm variant='login'/>
+        <AuthForm variant="login" />
       </Content>
     </>
-  )
+  );
 }
 
 export default App;

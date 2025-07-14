@@ -1,16 +1,31 @@
+const db = require("./dbconn");
 
-const db = require('../database/dbconn');
+const { promisify } = require("util");
 
+const queryAsync = promisify(db.query).bind(db);
 
-
-const queryAsync = (sql, params) => {
-  return new Promise((resolve, reject) => {
-    db.query(sql, params, (err, results) => {
-      if (err) return reject(err);
-      resolve(results);
-    });
-  });
+// Utility function to disable foreign key checks
+const disableForeignKeyChecks = async () => {
+  try {
+    await queryAsync("SET FOREIGN_KEY_CHECKS = 0");
+    console.log("Foreign key checks disabled");
+  } catch (error) {
+    console.error("Failed to disable foreign key checks:", error);
+  }
 };
 
+// Utility function to enable foreign key checks
+const enableForeignKeyChecks = async () => {
+  try {
+    await queryAsync("SET FOREIGN_KEY_CHECKS = 1");
+    console.log("Foreign key checks enabled");
+  } catch (error) {
+    console.error("Failed to enable foreign key checks:", error);
+  }
+};
 
-module.exports ={ queryAsync };
+module.exports = {
+  queryAsync,
+  disableForeignKeyChecks,
+  enableForeignKeyChecks,
+};
