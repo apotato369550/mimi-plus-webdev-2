@@ -73,7 +73,7 @@ exports.register = async (req, res) => {
                   },
                 });
 
-                const verifyURL = `http://localhost:5002/verify-email/${verificationToken}`;
+                const verifyURL = `http://localhost:5002/api/verify-email/${verificationToken}`;
 
                 const mailOptions = {
                   from: process.env.EMAIL_USER,
@@ -140,9 +140,7 @@ exports.verifyEmail = (req, res) => {
               .json({ message: "Could not verify account" });
           }
 
-          res
-            .status(500)
-            .json({ message: "Email verified! you can now login" });
+          res.status(500).json({ message: "Email verified! you can now login" });
         },
       );
     },

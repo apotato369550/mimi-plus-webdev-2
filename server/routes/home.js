@@ -8,10 +8,6 @@ const router = express.Router();
  ******************************************************************/
 
 router.get("/", verifyToken.authenticateToken, homeController.viewHome);
-router.post(
-  "/redeem",
-  verifyToken.authenticateToken,
-  homeController.quickRedeem,
-);
+router.post("/redeem", verifyToken.authenticateToken, homeController.quickRedeem);
 
 module.exports = router;
