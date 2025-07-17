@@ -1,8 +1,7 @@
-import { Cookie } from "lucide-react";
+import { Cookie, Coffee, Sparkles, PencilRuler } from "lucide-react";
 import Button from "./Button.jsx";
 
 export default function RewardCard({
-  icon = <Cookie className="h-8 w-8" />,
   product,
   brand,
   description,
@@ -11,21 +10,37 @@ export default function RewardCard({
   rewardID,
   onRedeem,
 }) {
+  const getIconByCategory = (category) => {
+    const lowerCategory = category.toLowerCase();
+    switch (lowerCategory) {
+      case "snacks":
+        return <Cookie className="h-8 w-8" />;
+      case "drinks":
+        return <Coffee className="h-8 w-8" />;
+      case "lifestyle":
+        return <Sparkles className="h-8 w-8" />;
+      case "school supply":
+        return <PencilRuler className="h-8 w-8" />;
+      default:
+        return <Cookie className="h-8 w-8" />;
+    }
+  };
+
   return (
-    <div className="flex flex-col px-6 py-5 border border-gray-300 rounded-[8px] shadow-sm h-fit w-[479px]">
-      <div className="flex justify-start items-center gap-4 pb-4">
-        {icon}
+    <div className="flex flex-col bg-white px-6 py-5 border border-gray-300 rounded-[8px] shadow-sm h-[280px] w-[449px]">
+      <div className="flex-none flex justify-start items-center gap-4 pb-4">
+        {getIconByCategory(category)}
         <div>
           <p className="text-md text-gray-900">{product}</p>
           <p className="text-sm text-gray-600">{brand}</p>
         </div>
       </div>
-      <p className="text-gray-600 max-w-[300px] pb-6">
-        {description}
-      </p>
-      <div className="flex justify-between pb-2">
+      <p className="flex-1 text-gray-600 text-sm">{description}</p>
+      <div className="flex-none flex justify-between items-center py-4">
         <p className="text-md">
-          <span className="bg-gray-200 px-2 py-0.5 rounded-[8px]">{category}</span>
+          <span className="bg-gray-200 px-2 py-0.5 rounded-[8px]">
+            {category}
+          </span>
         </p>
         <div>
           <p className="font-black text-primary-600 text-end">{points}</p>
@@ -33,13 +48,8 @@ export default function RewardCard({
         </div>
       </div>
 
-      <Button 
-        variant="card"
-        onClick={() => onRedeem && onRedeem(rewardID)}
-      >
-        <span className="font-semibold">
-          Redeem Now
-        </span>
+      <Button variant="card" onClick={() => onRedeem && onRedeem(rewardID)}>
+        <span className="font-semibold">Redeem Now</span>
       </Button>
     </div>
   );

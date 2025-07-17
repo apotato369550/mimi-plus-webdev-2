@@ -10,14 +10,14 @@ exports.adminDashboard = async (req, res) => {
   try {
     console.log("Fetching admin dashboard data...");
 
-    const customerResult = await queryAsync(
-      "SELECT COUNT(*) AS totalCustomers FROM customers",
+    const userResult = await queryAsync(
+      "SELECT COUNT(*) AS totalUsers FROM users WHERE role = 'customer'",
     );
-    const totalCustomers = customerResult[0].totalCustomers;
-    console.log("Total customers:", totalCustomers);
+    const totalUsers = userResult[0].totalUsers;
+    console.log("Total users:", totalUsers);
 
     const activeMembersResult = await queryAsync(
-      "SELECT COUNT(*) AS activeMembers FROM customers WHERE pointsBalance > 0",
+      "SELECT COUNT(*) AS activeMembers FROM users WHERE pointsBalance > 0",
     );
     const activeMembers = activeMembersResult[0].activeMembers;
     console.log("Active members:", activeMembers);
@@ -41,7 +41,7 @@ exports.adminDashboard = async (req, res) => {
     console.log("This month start:", thisMonthStart);
 
     const thisMonthActiveResult = await queryAsync(
-      "SELECT COUNT(DISTINCT customerID) AS thisMonthActive FROM redemption WHERE dateRedeemed >= ?",
+      "SELECT COUNT(DISTINCT userID) AS thisMonthActive FROM redemption WHERE dateRedeemed >= ?",
       [thisMonthStart],
     );
     const thisMonthActive = thisMonthActiveResult[0].thisMonthActive;
@@ -63,7 +63,7 @@ exports.adminDashboard = async (req, res) => {
 
     // Engagement metrics
     const totalPointsEarnedResult = await queryAsync(
-      "SELECT SUM(totalEarnedLifetime) AS totalPointsEarned FROM customers",
+      "SELECT SUM(totalEarnedLifetime) AS totalPointsEarned FROM users",
     );
     const totalPointsEarned = totalPointsEarnedResult[0].totalPointsEarned || 0;
     console.log("Total points earned:", totalPointsEarned);
@@ -76,7 +76,7 @@ exports.adminDashboard = async (req, res) => {
 
     const dashboardData = {
       // Basic metrics
-      totalCustomers,
+      totalUsers,
       activeMembers,
       pointsRedeemed: Math.round(pointsRedeemed),
       totalPending,
@@ -107,42 +107,48 @@ exports.adminDashboard = async (req, res) => {
 exports.getDashboardTransactions = async (req, res) => {
   try {
     const type = req.query.type || "all";
-    const limit = req.query.limit;
+    const totalLimit = req.query.limit || 10;
 
     let query = `
-      SELECT 
-        t.transactionID as id,
-        DATE_FORMAT(t.date, '%m/%d/%Y') as date,
-        t.date as sortDate,
-        c.name,
-        'Purchase' as type,
-        CONCAT('Payment - ₱', t.paymentAmount) as description,
-        ABS(t.pointsChange) as points
-      FROM transactions t
-      JOIN customers c ON t.customerID = c.customerID
-      WHERE t.paymentAmount > 0
+      (
+        SELECT 
+          t.transactionID as id,
+          DATE_FORMAT(t.date, '%m/%d/%Y') as date,
+          t.date as sortDate,
+          c.name,
+          'Purchase' as type,
+          'Purchase' as description,
+          t.pointsChange as points,
+          t.paymentAmount as payment
+        FROM transactions t
+        JOIN users c ON t.userID = c.userID
+        WHERE t.paymentAmount > 0
+        ORDER BY t.date DESC
+        LIMIT ${totalLimit}
+      )
       
       UNION ALL
       
-      SELECT 
-        r.redeemID as id,
-        DATE_FORMAT(r.dateRedeemed, '%m/%d/%Y') as date,
-        r.dateRedeemed as sortDate,
-        c.name,
-        'Redeem' as type,
-        CONCAT('Redeemed: ', rew.rewardName) as description,
-        -r.pointsUsed as points
-      FROM redemption r
-      JOIN customers c ON r.customerID = c.customerID
-      JOIN rewards rew ON r.rewardID = rew.rewardID
-      WHERE r.redeemStatus != 'denied'
+      (
+        SELECT 
+          r.redeemID as id,
+          DATE_FORMAT(r.dateRedeemed, '%m/%d/%Y') as date,
+          r.dateRedeemed as sortDate,
+          c.name,
+          'Redeem' as type,
+          CONCAT('Redeemed: ', rew.rewardName) as description,
+          -r.pointsUsed as points,
+          0 as payment
+        FROM redemption r
+        JOIN users c ON r.userID = c.userID
+        JOIN rewards rew ON r.rewardID = rew.rewardID
+        WHERE r.redeemStatus != 'denied'
+        ORDER BY r.dateRedeemed DESC
+        LIMIT ${totalLimit}
+      )
       ORDER BY sortDate DESC
+      LIMIT ${totalLimit}
     `;
-
-    // Add limit only if specified
-    if (limit) {
-      query += ` LIMIT ${parseInt(limit)}`;
-    }
 
     let params = [];
 
@@ -161,7 +167,7 @@ exports.getDashboardTransactions = async (req, res) => {
           "WHERE r.redeemStatus = 'pending'",
         );
         // Remove transactions part for redeem filter
-        query = query.replace(/SELECT.*FROM transactions.*UNION ALL/, "");
+        query = query.replace(/\(\s*SELECT.*?LIMIT \${totalLimit}\s*\)\s*UNION ALL\s*/s, "");
       }
     }
 
@@ -186,17 +192,19 @@ exports.getTopCustomers = async (req, res) => {
       SELECT 
         c.name,
         c.pointsBalance as points,
-        COUNT(t.transactionID) as purchases
-      FROM customers c
-      LEFT JOIN transactions t ON c.customerID = t.customerID
-      GROUP BY c.customerID, c.name, c.pointsBalance
+        COUNT(t.transactionID) as purchases,
+        c.role
+      FROM users c
+      LEFT JOIN transactions t ON c.userID = t.userID
+      WHERE c.role = 'customer'
+      GROUP BY c.userID, c.name, c.pointsBalance, c.role
       ORDER BY c.pointsBalance DESC
       LIMIT 5
     `;
 
-    const customers = await queryAsync(query);
+    const users = await queryAsync(query);
 
-    res.status(200).json({ customers });
+    res.status(200).json({ users });
   } catch (error) {
     console.error("Error fetching top customers:", error);
     res.status(500).json({ message: "Server Error", error: error.message });
@@ -220,7 +228,7 @@ exports.processPendingRedemptions = async (req, res) => {
 
     // Get specific pending redemptions
     const pendingRedemptions = await queryAsync(
-      "SELECT r.redeemID, r.customerID, r.pointsUsed FROM redemption r WHERE r.redeemStatus = 'pending' AND r.redeemID IN (?)",
+      "SELECT r.redeemID, r.userID, r.pointsUsed FROM redemption r WHERE r.redeemStatus = 'pending' AND r.redeemID IN (?)",
       [redemptionIds],
     );
 
@@ -240,12 +248,12 @@ exports.processPendingRedemptions = async (req, res) => {
         if (action === "approve") {
           // Check if customer has enough points
           const customerResult = await queryAsync(
-            "SELECT pointsBalance FROM customers WHERE customerID = ?",
-            [redemption.customerID],
+            "SELECT pointsBalance FROM users WHERE userID = ?",
+            [redemption.userID],
           );
 
           if (customerResult.length === 0) {
-            console.error(`Customer ${redemption.customerID} not found`);
+            console.error(`Customer ${redemption.userID} not found`);
             failedCount++;
             continue;
           }
@@ -254,7 +262,7 @@ exports.processPendingRedemptions = async (req, res) => {
 
           if (currentBalance < redemption.pointsUsed) {
             console.error(
-              `Customer ${redemption.customerID} has insufficient points`,
+              `Customer ${redemption.userID} has insufficient points`,
             );
             failedCount++;
             continue;
@@ -274,8 +282,8 @@ exports.processPendingRedemptions = async (req, res) => {
 
           // Deduct points from customer balance
           await queryAsync(
-            "UPDATE customers SET pointsBalance = pointsBalance - ? WHERE customerID = ?",
-            [redemption.pointsUsed, redemption.customerID],
+            "UPDATE users SET pointsBalance = pointsBalance - ? WHERE userID = ?",
+            [redemption.pointsUsed, redemption.userID],
           );
 
           // Create transaction record for the redemption
@@ -284,8 +292,8 @@ exports.processPendingRedemptions = async (req, res) => {
           const description = `${rewardName}${brand ? ` - ${brand}` : ""}`;
 
           await queryAsync(
-            "INSERT INTO transactions(customerID, paymentAmount, pointsChange, date) VALUES(?, ?, ?, NOW())",
-            [redemption.customerID, 0, -redemption.pointsUsed],
+            "INSERT INTO transactions(userID, paymentAmount, pointsChange, date) VALUES(?, ?, ?, NOW())",
+            [redemption.userID, 0, redemption.pointsUsed],
           );
         } else if (action === "deny") {
           // Update redemption status to denied
@@ -324,55 +332,55 @@ exports.processPendingRedemptions = async (req, res) => {
 
 exports.processPurchase = async (req, res) => {
   try {
-    const { customerName, costOfPurchase } = req.body;
+    const { userId, costOfPurchase } = req.body;
 
-    console.log("Processing purchase:", { customerName, costOfPurchase });
+    console.log("Processing purchase:", { userId, costOfPurchase });
 
-    if (!customerName || !costOfPurchase) {
+    if (!userId || !costOfPurchase) {
       return res.status(400).json({
-        message: "Customer name and cost of purchase are required.",
+        message: "User ID and cost of purchase are required.",
       });
     }
 
-    // Find customer by name
+    // Find customer by ID
     const customerResult = await queryAsync(
-      "SELECT customerID, name, pointsBalance FROM customers WHERE name = ?",
-      [customerName],
+      "SELECT userID, name, pointsBalance FROM users WHERE userID = ?",
+      [userId],
     );
 
     if (customerResult.length === 0) {
       return res.status(404).json({
-        message: "Customer not found. Please check the customer name.",
+        message: "Customer not found. Please check the user ID.",
       });
     }
 
-    const customerID = customerResult[0].customerID;
+    const customerID = customerResult[0].userID;
     const currentPoints = customerResult[0].pointsBalance;
-    const pointsToAdd = Math.floor(costOfPurchase / 50);
+    const pointsToAdd = Math.abs(Math.floor(costOfPurchase / 50));
 
     console.log("Customer found:", { customerID, currentPoints, pointsToAdd });
 
     // Add points to customer
     await queryAsync(
-      "UPDATE customers SET totalEarnedLifetime = totalEarnedLifetime + ?, pointsBalance = pointsBalance + ? WHERE customerID = ?",
+      "UPDATE users SET totalEarnedLifetime = totalEarnedLifetime + ?, pointsBalance = pointsBalance + ? WHERE userID = ?",
       [pointsToAdd, pointsToAdd, customerID],
     );
 
     // Create transaction record
     await queryAsync(
-      "INSERT INTO transactions(customerID, paymentAmount, pointsChange, date) VALUES(?, ?, ?, NOW())",
+      "INSERT INTO transactions(userID, paymentAmount, pointsChange, date) VALUES(?, ?, ABS(?), NOW())",
       [customerID, costOfPurchase, pointsToAdd],
     );
 
     console.log("Purchase processed successfully:", {
-      customerName,
+      customerName: customerResult[0].name,
       costOfPurchase,
       pointsAdded: pointsToAdd,
     });
 
     res.status(200).json({
       message: "Purchase processed successfully",
-      customerName,
+      customerName: customerResult[0].name,
       costOfPurchase,
       pointsAdded: pointsToAdd,
       newBalance: currentPoints + pointsToAdd,
@@ -460,21 +468,19 @@ exports.deleteReward = async (req, res) => {
       });
     }
 
-    // Disable foreign key checks and delete
-    await queryAsync("SET FOREIGN_KEY_CHECKS = 0");
-    const deleteResult = await queryAsync(
-      "DELETE FROM rewards WHERE rewardID = ?",
+    // Soft delete: set isActive to 'inactive'
+    const updateResult = await queryAsync(
+      "UPDATE rewards SET isActive = 'inactive' WHERE rewardID = ?",
       [rewardId],
     );
-    await queryAsync("SET FOREIGN_KEY_CHECKS = 1");
 
-    if (deleteResult.affectedRows === 0) {
+    if (updateResult.affectedRows === 0) {
       return res.status(404).json({
         message: "Reward not found or could not be deleted.",
       });
     }
 
-    console.log("Reward deleted successfully:", {
+    console.log("Reward soft deleted (isActive set to inactive):", {
       rewardID: rewardId,
       rewardName: rewardResult[0].rewardName,
     });
@@ -490,28 +496,38 @@ exports.deleteReward = async (req, res) => {
   }
 };
 
-
-
 /******************************************************************
  *                       View All Customers
  ******************************************************************/
 
 exports.viewAllCustomers = async (req, res) => {
   try {
-    const sql =
-      "SELECT customerID, name, email, dateJoined, pointsBalance FROM customers";
-    const customers = await queryAsync(sql);
+    const showInactive = req.query.showInactive === "true";
+    
+    let sql = `
+      SELECT userID, name, email, dateJoined, status, pointsBalance, role
+      FROM users 
+      WHERE role = 'customer'
+    `;
+
+    if (!showInactive) {
+      sql += " AND status = 'active'";
+    }
+
+    sql += " ORDER BY userID DESC";
+
+    const users = await queryAsync(sql);
 
     res.status(200).json({
-      message: "All customers retrieved",
-      customers: customers,
+      message: "All users retrieved",
+      users: users,
     });
   } catch (error) {
     console.error("Error fetching customers:", error);
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
-//Delete Customer
+
 exports.deleteCustomer = async (req, res) => {
   const customerID = req.params.id;
 
@@ -522,7 +538,7 @@ exports.deleteCustomer = async (req, res) => {
   try {
     // Check if customer exists
     const customerResult = await queryAsync(
-      "SELECT customerID, name FROM customers WHERE customerID = ?",
+      "SELECT userID, name FROM users WHERE userID = ? AND role = 'customer'",
       [customerID],
     );
 
@@ -530,32 +546,76 @@ exports.deleteCustomer = async (req, res) => {
       return res.status(404).json({ message: "Customer not found" });
     }
 
-    // Disable foreign key checks and delete
-    await queryAsync("SET FOREIGN_KEY_CHECKS = 0");
+    // Soft delete: update status to inactive
     const result = await queryAsync(
-      "DELETE FROM customers WHERE customerID = ?",
+      "UPDATE users SET status = 'inactive' WHERE userID = ? AND role = 'customer'",
       [customerID],
     );
-    await queryAsync("SET FOREIGN_KEY_CHECKS = 1");
 
     if (result.affectedRows === 0) {
       return res
         .status(404)
-        .json({ message: "Customer not found or could not be deleted" });
+        .json({ message: "Customer not found or could not be deactivated" });
     }
 
-    console.log("Customer deleted successfully:", {
+    console.log("Customer deactivated successfully:", {
       customerID,
       customerName: customerResult[0].name,
     });
 
     res.status(200).json({
-      message: `Customer ${customerResult[0].name} deleted successfully.`,
+      message: `Customer ${customerResult[0].name} deactivated successfully.`,
       customerID: customerID,
       customerName: customerResult[0].name,
     });
   } catch (error) {
-    console.error("Error deleting customer:", error);
+    console.error("Error deactivating customer:", error);
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
+
+exports.reactivateCustomer = async (req, res) => {
+  const customerID = req.params.id;
+
+  if (!customerID) {
+    return res.status(400).json({ message: "Customer ID is required" });
+  }
+
+  try {
+    // Check if customer exists
+    const customerResult = await queryAsync(
+      "SELECT userID, name FROM users WHERE userID = ? AND role = 'customer'",
+      [customerID],
+    );
+
+    if (customerResult.length === 0) {
+      return res.status(404).json({ message: "Customer not found" });
+    }
+
+    // Reactivate customer
+    const result = await queryAsync(
+      "UPDATE users SET status = 'active' WHERE userID = ? AND role = 'customer'",
+      [customerID],
+    );
+
+    if (result.affectedRows === 0) {
+      return res
+        .status(404)
+        .json({ message: "Customer not found or could not be reactivated" });
+    }
+
+    console.log("Customer reactivated successfully:", {
+      customerID,
+      customerName: customerResult[0].name,
+    });
+
+    res.status(200).json({
+      message: `Customer ${customerResult[0].name} reactivated successfully.`,
+      customerID: customerID,
+      customerName: customerResult[0].name,
+    });
+  } catch (error) {
+    console.error("Error reactivating customer:", error);
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
@@ -602,16 +662,16 @@ exports.addPoints = async (req, res) => {
     return res.status(400).json({ message: "Payment amount is required" });
   }
 
-  const pointsToAdd = Math.floor(paymentAmount / 50);
+  const pointsToAdd = Math.abs(Math.floor(paymentAmount / 50));
 
   try {
     await queryAsync(
-      "UPDATE customers SET  totalEarnedLifetime = totalEarnedLifetime + ?, pointsBalance = pointsBalance + ? WHERE customerID = ?",
+      "UPDATE users SET  totalEarnedLifetime = totalEarnedLifetime + ?, pointsBalance = pointsBalance + ? WHERE userID = ?",
       [pointsToAdd, pointsToAdd, customerID],
     );
 
     await queryAsync(
-      "INSERT INTO transactions(customerID, paymentAmount, pointsChange, date) VALUES(?, ?, ?, NOW())",
+      "INSERT INTO transactions(userID, paymentAmount, pointsChange, date) VALUES(?, ?, ABS(?), NOW())",
       [customerID, paymentAmount, pointsToAdd],
     );
 
@@ -632,7 +692,7 @@ exports.viewCustomerPage = async (req, res) => {
   console.log("customerid: ", customerID);
   try {
     const customer = await queryAsync(
-      "SELECT customerID, name, totalEarnedLifetime FROM customers WHERE customerID = ?",
+      "SELECT userID, name, totalEarnedLifetime FROM users WHERE userID = ?",
       [customerID],
     );
 
@@ -641,7 +701,7 @@ exports.viewCustomerPage = async (req, res) => {
     }
 
     const pending = await queryAsync(
-      "SELECT * FROM redemption WHERE customerID = ? AND redeemStatus = 'pending'",
+      "SELECT * FROM redemption WHERE userID = ? AND redeemStatus = 'pending'",
       [customerID],
     );
 
@@ -663,15 +723,14 @@ exports.getPendingRedemptions = async (req, res) => {
   try {
     const query = `
       SELECT 
-        r.redeemID as id,
-        DATE_FORMAT(r.dateRedeemed, '%m/%d/%Y') as date,
-        c.name,
-        'Redeem' as type,
-        CONCAT(rew.rewardName, ' - ', rew.brand) as description,
-        r.pointsUsed as points,
-        r.redeemStatus as status
+        r.redeemID,
+        r.dateRedeemed,
+        u.name as customerName,
+        rew.rewardName,
+        r.pointsUsed,
+        r.redeemStatus
       FROM redemption r
-      JOIN customers c ON r.customerID = c.customerID
+      JOIN users u ON r.userID = u.userID
       JOIN rewards rew ON r.rewardID = rew.rewardID
       WHERE r.redeemStatus = 'pending'
       ORDER BY r.dateRedeemed DESC
@@ -685,6 +744,62 @@ exports.getPendingRedemptions = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching pending redemptions:", error);
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
+
+/******************************************************************
+ *                       Reactivate Reward
+ ******************************************************************/
+
+exports.reactivateReward = async (req, res) => {
+  try {
+    const rewardId = req.params.rewardId;
+
+    console.log("Reactivating reward:", rewardId);
+
+    if (!rewardId) {
+      return res.status(400).json({
+        message: "Reward ID is required.",
+      });
+    }
+
+    // Check if reward exists
+    const rewardResult = await queryAsync(
+      "SELECT rewardID, rewardName FROM rewards WHERE rewardID = ?",
+      [rewardId],
+    );
+
+    if (rewardResult.length === 0) {
+      return res.status(404).json({
+        message: "Reward not found.",
+      });
+    }
+
+    // Set isActive to 'active'
+    const updateResult = await queryAsync(
+      "UPDATE rewards SET isActive = 'active' WHERE rewardID = ?",
+      [rewardId],
+    );
+
+    if (updateResult.affectedRows === 0) {
+      return res.status(404).json({
+        message: "Reward not found or could not be reactivated.",
+      });
+    }
+
+    console.log("Reward reactivated:", {
+      rewardID: rewardId,
+      rewardName: rewardResult[0].rewardName,
+    });
+
+    res.status(200).json({
+      message: "Reward reactivated successfully",
+      rewardID: rewardId,
+      rewardName: rewardResult[0].rewardName,
+    });
+  } catch (error) {
+    console.error("Error reactivating reward:", error);
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };

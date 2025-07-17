@@ -1,85 +1,155 @@
-"use client"
+"use client";
 
-import { useState, useRef, useEffect } from "react"
-import { Search, MoreHorizontal } from "lucide-react"
-import Header from "../components/Header.jsx"
-import Pagination from "../components/Pagination.jsx"
+import { useState, useEffect } from "react";
+import Header from "../components/Header.jsx";
+import Pagination from "../components/Pagination.jsx";
+import SearchBar from "../components/SearchBar.jsx";
+import Button from "../components/Button.jsx";
+import { Plus, Trash2, RefreshCw } from "lucide-react";
+import { DeleteUserModal } from "../components/DeleteUser.jsx";
+import { ReactivateUserModal } from "../components/ReactivateUser.jsx";
 
 export default function CustomerDirectoryPage() {
-  const [openDropdownId, setOpenDropdownId] = useState(null)
-  const [customers, setCustomers] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage] = useState(10)
-  const dropdownRefs = useRef({})
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showReactivateModal, setShowReactivateModal] = useState(false);
 
   useEffect(() => {
-    fetchCustomers()
-  }, [])
+    fetchUsers();
+  }, []);
 
-  const fetchCustomers = async () => {
+  const fetchUsers = async () => {
     try {
-      setLoading(true)
-      const response = await fetch("/api/admin/customers", {
+      setLoading(true);
+      const response = await fetch("/api/admin/customers?showInactive=true", {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
-      })
-      
+      });
       if (response.ok) {
-        const data = await response.json()
-        setCustomers(data.customers || [])
+        const data = await response.json();
+        setUsers(data.users || []);
       } else {
-        console.error("Failed to fetch customers")
+        console.error("Failed to fetch users");
       }
     } catch (error) {
-      console.error("Error fetching customers:", error)
+      console.error("Error fetching users:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  const toggleDropdown = (id) => {
-    setOpenDropdownId(openDropdownId === id ? null : id)
-  }
+  const handleDeleteUser = async (userId) => {
+    try {
+      console.log("Starting user deletion process for ID:", userId);
+      console.log("Token:", localStorage.getItem("token"));
+
+      const response = await fetch(`/api/admin/customers/${userId}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      console.log("Response status:", response.status);
+      const responseData = await response.json();
+      console.log("Response data:", responseData);
+
+      if (response.ok) {
+        console.log("User deactivated successfully:", responseData);
+        await fetchUsers();
+        setShowDeleteModal(false);
+      } else {
+        console.error("Server error:", responseData);
+        alert(
+          `Error deactivating user: ${responseData.message || "Unknown error"}`,
+        );
+      }
+    } catch (error) {
+      console.error("Error deactivating user:", error);
+      alert(
+        "Error deactivating user. Please check your connection and try again.",
+      );
+    }
+  };
+
+  const handleReactivateUser = async (userId) => {
+    try {
+      console.log("Starting user reactivation process for ID:", userId);
+      console.log("Token:", localStorage.getItem("token"));
+
+      const response = await fetch(`/api/admin/reactivate-customer/${userId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      console.log("Response status:", response.status);
+      const responseData = await response.json();
+      console.log("Response data:", responseData);
+
+      if (response.ok) {
+        console.log("User reactivated successfully:", responseData);
+        await fetchUsers();
+        setShowReactivateModal(false);
+      } else {
+        console.error("Server error:", responseData);
+        alert(
+          `Error reactivating user: ${responseData.message || "Unknown error"}`,
+        );
+      }
+    } catch (error) {
+      console.error("Error reactivating user:", error);
+      alert(
+        "Error reactivating user. Please check your connection and try again.",
+      );
+    }
+  };
+
+  const handleShowDeleteModal = () => {
+    setShowDeleteModal(true);
+  };
+
+  const handleCloseDeleteModal = () => {
+    setShowDeleteModal(false);
+  };
+
+  const handleShowReactivateModal = () => {
+    setShowReactivateModal(true);
+  };
+
+  const handleCloseReactivateModal = () => {
+    setShowReactivateModal(false);
+  };
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (openDropdownId !== null) {
-        const currentDropdownRef = dropdownRefs.current[openDropdownId]
-        if (currentDropdownRef && !currentDropdownRef.contains(event.target)) {
-          setOpenDropdownId(null)
-        }
-      }
-    }
+    setCurrentPage(1);
+  }, [searchTerm]);
 
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [openDropdownId])
+  const filteredUsers = users.filter((user) => {
+    const matchesSearch =
+      user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase());
 
-  const filteredCustomers = customers.filter(customer =>
-    customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.email.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+    return matchesSearch;
+  });
 
-  // Pagination logic
-  const totalItems = filteredCustomers.length
-  const totalPages = Math.ceil(totalItems / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const currentCustomers = filteredCustomers.slice(startIndex, endIndex)
+  const totalItems = filteredUsers.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentUsers = filteredUsers.slice(startIndex, endIndex);
 
   const handlePageChange = (page) => {
-    setCurrentPage(page)
-  }
-
-  // Reset to first page when search term changes
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [searchTerm])
+    setCurrentPage(page);
+  };
 
   if (loading) {
     return (
@@ -89,117 +159,100 @@ export default function CustomerDirectoryPage() {
           <p>Loading customers...</p>
         </div>
       </>
-    )
+    );
   }
 
   return (
     <>
       <Header variant="admin" />
+      <DeleteUserModal
+        isOpen={showDeleteModal}
+        onClose={handleCloseDeleteModal}
+        onDelete={handleDeleteUser}
+      />
+      <ReactivateUserModal
+        isOpen={showReactivateModal}
+        onClose={handleCloseReactivateModal}
+        onReactivate={handleReactivateUser}
+      />
       <div className="flex">
-        <div className="flex flex-col border-r border-gray-300 h-screen w-full p-6 gap-4">
+        <div className="flex flex-col h-screen w-full px-4 py-3 gap-4">
           <h3 className="font-bold">Customer Directory</h3>
-          <div className="flex flex-col border border-gray-300 rounded-[8px] gap-8 px-6 py-5">
+          <div className="flex flex-col border border-gray-200 rounded-[8px] gap-2 px-6 py-5">
             <div>
-              <h4 className="font-bold text-gray-900">All Customers</h4>
+              <p className="text-lg font-bold text-gray-900">All Customers</p>
               <p className="text-gray-600">
-                A list of all the Mimi+ users
+                A list of all customers in the Mimi+ system
               </p>
             </div>
-            <div className="flex items-center gap-4 mb-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                <input
-                  type="search"
-                  placeholder="Search customers by name or email"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-gray-200 bg-white px-3 py-2 pl-9 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                />
+            <div className="flex items-center justify-between w-full">
+              <div className="flex w-full gap-4 items-center">
+                <div className="flex-1">
+                  <SearchBar
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search customers by name or email"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handleShowDeleteModal} variant="destructive">
+                    <div className="flex justify-center items-center text-sm">
+                      <Trash2 size={16} />
+                    </div>
+                  </Button>
+                  <Button onClick={handleShowReactivateModal} variant="outline">
+                    <div className="flex justify-center items-center text-sm">
+                      <RefreshCw size={16} />
+                    </div>
+                  </Button>
+                </div>
               </div>
             </div>
             <div>
-              <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+              <table className="w-full text-sm text-left rtl:text-right text-gray-500">
+                <thead className="text-xs text-gray-700 uppercase bg-gray-50">
                   <tr>
-                    <th scope="col" className="px-6 py-3">
-                      ID
-                    </th>
-                    <th scope="col" className="px-6 py-3">
-                      Name
-                    </th>
-                    <th scope="col" className="px-6 py-3">
-                      Email
-                    </th>
-                    <th scope="col" className="px-6 py-3">
-                      Date Joined
-                    </th>
-                    <th scope="col" className="px-6 py-3">
-                      Points
-                    </th>
-                    <th scope="col" className="px-6 py-3">
-                      Actions
-                    </th>
+                    <th scope="col" className="px-4 py-3">Name</th>
+                    <th scope="col" className="px-4 py-3">Email</th>
+                    <th scope="col" className="px-4 py-3">Date Joined</th>
+                    <th scope="col" className="px-4 py-3 text-center">Points Balance</th>
+                    <th scope="col" className="px-4 py-3 text-center">Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {currentCustomers.map((customer) => (
+                  {currentUsers.map((user) => (
                     <tr
-                      key={customer.customerID}
-                      className="odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700 border-gray-200"
+                      key={user.userID}
+                      className="border-b border-gray-200 hover:bg-gray-50"
                     >
-                      <th
-                        scope="row"
-                        className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white"
-                      >
-                        {customer.customerID}
-                      </th>
-                      <td className="px-6 py-4">{customer.name}</td>
-                      <td className="px-6 py-4">{customer.email}</td>
-                      <td className="px-6 py-4">
-                        {new Date(customer.dateJoined).toLocaleDateString()}
+                      <td className="px-4 py-3 font-medium text-gray-900">
+                        {user.name}
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 px-3 py-1 text-xs bg-green-100 text-green-600">
-                          {customer.pointsBalance} points
+                      <td className="px-4 py-3">
+                        {user.email}
+                      </td>
+                      <td className="px-4 py-3">
+                        {new Date(user.dateJoined).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-center">
+                          <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 bg-primary-100 text-primary-600">
+                            {user.pointsBalance} points
+                          </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div
-                          className="relative inline-block text-left"
-                          ref={(el) => (dropdownRefs.current[customer.customerID] = el)}
-                        >
-                          <button
-                            className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 w-10 hover:bg-gray-100 hover:text-gray-900"
-                            onClick={() => toggleDropdown(customer.customerID)}
-                            aria-expanded={openDropdownId === customer.customerID}
-                            aria-haspopup="menu"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Actions</span>
-                          </button>
-                          {openDropdownId === customer.customerID && (
-                            <div className="absolute z-50 mt-2 w-40 rounded-md border border-gray-200 bg-white p-1 shadow-lg right-0">
-                              <div className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-gray-100 focus:text-gray-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50">
-                                Edit Customer
-                              </div>
-                              <div className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-gray-100 focus:text-gray-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50">
-                                Delete Customer
-                              </div>
-                            </div>
-                          )}
-                        </div>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${user.status === 'active' ? 'bg-green-100 text-green-600 border-green-200' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
+                          {user.status === 'active' ? 'Active' : 'Inactive'}
+                        </span>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            {filteredCustomers.length === 0 && (
-              <div className="text-center py-8">
-                <p className="text-gray-500">No customers found.</p>
-              </div>
-            )}
-            {filteredCustomers.length > 0 && (
+
+            {totalItems > 0 && (
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
@@ -208,9 +261,18 @@ export default function CustomerDirectoryPage() {
                 itemsPerPage={itemsPerPage}
               />
             )}
+
+            {totalItems === 0 && (
+              <div className="text-center py-8">
+                <p className="text-gray-500">
+                  No customers found matching your criteria.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
     </>
-  )
+  );
 }
+

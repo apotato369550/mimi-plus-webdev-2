@@ -1,8 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Header from "../components/Header.jsx";
 import Pagination from "../components/Pagination.jsx";
 import { AddRewardModal } from "../components/AddReward.jsx";
 import { DeleteRewardModal } from "../components/DeleteReward.jsx";
+import { ReactivateRewardModal } from "../components/ReactivateReward.jsx";
+import Button from "../components/Button.jsx";
+import { Search, Plus, Trash2, RefreshCw } from "lucide-react";
+import SearchBar from "../components/SearchBar.jsx";
 
 export default function RewardsDashboard() {
   const [rewardsData, setRewardsData] = useState([]);
@@ -12,11 +16,13 @@ export default function RewardsDashboard() {
   const [loading, setLoading] = useState(true);
   const [showAddReward, setShowAddReward] = useState(false);
   const [showDeleteReward, setShowDeleteReward] = useState(false);
+  const [showReactivateReward, setShowReactivateReward] = useState(false);
+  const [selectedReward, setSelectedReward] = useState(null);
 
   useEffect(() => {
     // Check user role and redirect if not admin
     const user = JSON.parse(localStorage.getItem("user") || "{}");
-    if (user.role !== 'admin') {
+    if (user.role !== "admin") {
       window.location.href = "/login";
       return;
     }
@@ -24,15 +30,99 @@ export default function RewardsDashboard() {
     fetchRewards();
   }, []);
 
+  const handleDeleteRewardClick = () => {
+    setShowDeleteReward(true);
+  };
+
+  const handleReactivateRewardClick = () => {
+    setShowReactivateReward(true);
+  };
+
+  const handleDeleteReward = async (rewardId) => {
+    try {
+      console.log("Starting reward deletion process for ID:", rewardId);
+      console.log("Token:", localStorage.getItem("token"));
+
+      const response = await fetch(`/api/admin/delete-reward/${rewardId}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      console.log("Response status:", response.status);
+      const responseData = await response.json();
+      console.log("Response data:", responseData);
+
+      if (response.ok) {
+        console.log("Reward deleted successfully:", responseData);
+        // Refresh the rewards list
+        await fetchRewards();
+        setShowDeleteReward(false); // Close the modal after successful deletion
+      } else {
+        console.error("Server error:", responseData);
+        alert(
+          `Error deleting reward: ${responseData.message || "Unknown error"}`,
+        );
+      }
+    } catch (error) {
+      console.error("Error deleting reward:", error);
+      alert(
+        "Error deleting reward. Please check your connection and try again.",
+      );
+    }
+  };
+
+  const handleReactivateReward = async (rewardId) => {
+    try {
+      console.log("Starting reward reactivation process for ID:", rewardId);
+      console.log("Token:", localStorage.getItem("token"));
+
+      const response = await fetch(`/api/admin/reactivate-reward/${rewardId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      console.log("Response status:", response.status);
+      const responseData = await response.json();
+      console.log("Response data:", responseData);
+
+      if (response.ok) {
+        console.log("Reward reactivated successfully:", responseData);
+        // Refresh the rewards list
+        await fetchRewards();
+        setShowReactivateReward(false); // Close the modal after successful reactivation
+      } else {
+        console.error("Server error:", responseData);
+        alert(
+          `Error reactivating reward: ${responseData.message || "Unknown error"}`,
+        );
+      }
+    } catch (error) {
+      console.error("Error reactivating reward:", error);
+      alert(
+        "Error reactivating reward. Please check your connection and try again.",
+      );
+    }
+  };
+
+  const handleCloseReactivateReward = () => {
+    setShowReactivateReward(false);
+  };
+
   const fetchRewards = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/admin/rewards", {
+      const response = await fetch("/api/admin/rewards?showInactive=true", {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setRewardsData(data.rewards || []);
@@ -49,16 +139,15 @@ export default function RewardsDashboard() {
   };
 
   useEffect(() => {
-    // Filter rewards based on search term
-    setCurrentPage(1); // Reset to first page when search term changes
+    setCurrentPage(1);
   }, [searchTerm]);
 
-  // Pagination logic
-  const filteredRewards = rewardsData.filter(reward => {
-    const matchesSearch = reward.rewardName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         reward.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         reward.brand?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+  const filteredRewards = rewardsData.filter((reward) => {
+    const matchesSearch =
+      reward.rewardName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      reward.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      reward.brand?.toLowerCase().includes(searchTerm.toLowerCase());
+
     return matchesSearch;
   });
 
@@ -84,41 +173,8 @@ export default function RewardsDashboard() {
     setShowAddReward(false);
   };
 
-  const handleShowDeleteReward = () => {
-    setShowDeleteReward(true);
-  };
-
   const handleCloseDeleteReward = () => {
     setShowDeleteReward(false);
-  };
-
-  const handleDeleteReward = async (rewardId) => {
-    try {
-      console.log("Deleting reward:", rewardId);
-
-      const response = await fetch(`/api/admin/delete-reward/${rewardId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-
-      const responseData = await response.json();
-
-      if (response.ok) {
-        console.log("Reward deleted successfully:", responseData);
-        // Refresh the rewards list
-        await fetchRewards();
-      } else {
-        console.error("Server error:", responseData);
-        alert(
-          `Error deleting reward: ${responseData.message || "Unknown error"}`,
-        );
-      }
-    } catch (error) {
-      console.error("Error deleting reward:", error);
-      alert("Error deleting reward. Please check your connection and try again.");
-    }
   };
 
   const handleAddReward = async (rewardData) => {
@@ -176,163 +232,85 @@ export default function RewardsDashboard() {
         onClose={handleCloseDeleteReward}
         onDelete={handleDeleteReward}
       />
+      <ReactivateRewardModal
+        isOpen={showReactivateReward}
+        onClose={handleCloseReactivateReward}
+        onReactivate={handleReactivateReward}
+      />
       <div className="flex">
-        <div className="flex flex-col border-r border-gray-300 h-screen w-full p-6 gap-4">
+        <div className="flex flex-col h-screen w-full px-4 py-3 gap-4">
           <h3 className="font-bold">Rewards Directory</h3>
-          <div className="flex flex-col border border-gray-300 rounded-[8px] gap-8 px-6 py-5">
+          <div className="flex flex-col border border-gray-200 rounded-[8px] gap-2 px-6 py-5">
             <div>
-              <h4 className="font-bold text-gray-900">All Rewards</h4>
+              <p className="text-lg font-bold text-gray-900">All Rewards</p>
               <p className="text-gray-600">
                 A list of all rewards available in the Mimi+ system
               </p>
             </div>
-            
-            {/* Filter and Search Bar */}
-            <div className="flex flex-col md:flex-row items-center justify-between mb-4 space-y-4 md:space-y-0 md:space-x-4">
-              <div className="relative flex-1 w-full md:max-w-xs">
-                <input
-                  type="text"
-                  placeholder="Search rewards..."
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400"
-                />
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="w-5 h-5 text-gray-400"
-                  >
-                    <circle cx="11" cy="11" r="8" />
-                    <path d="m21 21-4.3-4.3" />
-                  </svg>
+            <div className="flex items-center justify-between w-full">
+              <div className="flex w-full gap-4 items-center">
+                <div className="flex-1">
+                  <SearchBar
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search rewards by name, category, or brand"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handleShowAddReward}>
+                    <div className="flex justify-center items-center text-sm">
+                      <Plus className="mr-2" size={16} />
+                      Add Reward
+                    </div>
+                  </Button>
+                  <Button onClick={handleDeleteRewardClick} variant="destructive">
+                    <div className="flex justify-center items-center text-sm">
+                      <Trash2 size={16} />
+                    </div>
+                  </Button>
+                  <Button onClick={handleReactivateRewardClick} variant="outline">
+                    <div className="flex justify-center items-center text-sm">
+                      <RefreshCw size={16} />
+                    </div>
+                  </Button>
                 </div>
               </div>
-              <div className="flex w-full md:w-auto gap-2">
-                <button 
-                  onClick={handleShowAddReward}
-                  className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 focus:outline-none focus:ring-1 focus:ring-primary-400 flex items-center justify-center space-x-1"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="w-4 h-4"
-                  >
-                    <path d="M12 5v14" />
-                    <path d="M5 12h14" />
-                  </svg>
-                  <span>Add Reward</span>
-                </button>
-                <button 
-                  onClick={handleShowDeleteReward}
-                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-1 focus:ring-red-400 flex items-center justify-center space-x-1"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="w-4 h-4"
-                  >
-                    <path d="M3 6h18" />
-                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                  </svg>
-                  <span>Delete Reward</span>
-                </button>
-              </div>
             </div>
-
             <div>
-              <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+              <table className="w-full text-sm text-left rtl:text-right text-gray-500">
+                <thead className="text-xs text-gray-700 uppercase bg-gray-50">
                   <tr>
-                    <th scope="col" className="px-6 py-3">
-                      Product
-                    </th>
-                    <th scope="col" className="px-6 py-3">
-                      Category
-                    </th>
-                    <th scope="col" className="px-6 py-3">
-                      Brand
-                    </th>
-                    <th scope="col" className="px-6 py-3">
-                      Status
-                    </th>
-                    <th scope="col" className="px-6 py-3">
-                      Points Required
-                    </th>
-                    <th scope="col" className="px-6 py-3">
-                      Actions
-                    </th>
+                    <th scope="col" className="px-4 py-3">Product</th>
+                    <th scope="col" className="px-4 py-3">Category</th>
+                    <th scope="col" className="px-4 py-3">Brand</th>
+                    <th scope="col" className="px-4 py-3 text-center">Status</th>
+                    <th scope="col" className="px-4 py-3 text-center">Points Required</th>
                   </tr>
                 </thead>
                 <tbody>
                   {currentRewards.map((reward) => (
                     <tr
                       key={reward.rewardID}
-                      className="odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700 border-gray-200"
+                      className="border-b border-gray-200 hover:bg-gray-50"
                     >
-                      <th
-                        scope="row"
-                        className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white"
-                      >
+                      <td className="px-4 py-3 font-medium text-gray-900">
                         {reward.rewardName}
-                      </th>
-                      <td className="px-6 py-4">{reward.category}</td>
-                      <td className="px-6 py-4">{reward.brand}</td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          reward.isActive === 'active' 
-                            ? 'bg-green-100 text-green-600' 
-                            : 'bg-red-100 text-red-600'
-                        }`}>
-                          {reward.isActive === 'active' ? 'Active' : 'Inactive'}
-                        </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className="px-3 py-1 border border-gray-300 rounded-full text-xs font-medium">
-                          {reward.pointsRequired}
-                        </span>
+                      <td className="px-4 py-3">
+                        {reward.category}
                       </td>
-                      <td className="px-6 py-4">
-                        <button className="p-1 rounded-full hover:bg-gray-100">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="24"
-                            height="24"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="w-4 h-4 text-gray-500"
-                          >
-                            <circle cx="12" cy="12" r="1" />
-                            <circle cx="19" cy="12" r="1" />
-                            <circle cx="5" cy="12" r="1" />
-                          </svg>
-                        </button>
+                      <td className="px-4 py-3">
+                        {reward.brand}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${reward.isActive === 'active' ? 'bg-green-100 text-green-600 border-green-200' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>{reward.isActive === 'active' ? 'Active' : 'Inactive'}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-center">
+                          <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 bg-primary-100 text-primary-600">
+                            {reward.pointsRequired} points
+                          </div>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -340,7 +318,6 @@ export default function RewardsDashboard() {
               </table>
             </div>
 
-            {/* Pagination */}
             {totalItems > 0 && (
               <Pagination
                 currentPage={currentPage}
@@ -353,7 +330,9 @@ export default function RewardsDashboard() {
 
             {totalItems === 0 && (
               <div className="text-center py-8">
-                <p className="text-gray-500">No rewards found matching your criteria.</p>
+                <p className="text-gray-500">
+                  No rewards found matching your criteria.
+                </p>
               </div>
             )}
           </div>

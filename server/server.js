@@ -4,6 +4,7 @@ const app = express();
 const dotenv = require("dotenv").config();
 const cors = require("cors");
 const bodyParser = require("body-parser");
+const staffRoutes = require("./routes/staff");
 
 /*******************************************************************
  *                     All predefined routes                                 *
@@ -17,7 +18,8 @@ app.use("/api/admin", require("./routes/admin"));
 app.use("/api/home", require("./routes/home"));
 app.use("/api/transactions", require("./routes/transactions"));
 app.use("/api/rewards", require("./routes/rewards"));
-app.use("/api", require("./routes/authentication"));
+app.use("/api/staff", staffRoutes);
+app.use("/api/auth", require("./routes/authentication"));
 
 const PORT = process.env.PORT || 5002;
 

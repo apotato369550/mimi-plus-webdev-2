@@ -6,34 +6,34 @@ const db = require('../database/dbconn.js');
 
 exports.viewTransactions = async (req, res) => {
   try {
-    const customerID = req.user.customerID;
+    const userID = req.user.userID;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const type = req.query.type; // 'all', 'redeemed', 'earned'
     const offset = (page - 1) * limit;
 
-    console.log("Fetching transactions for customerID:", customerID, "page:", page, "type:", type);
+    console.log("Fetching transactions for userID:", userID, "page:", page, "type:", type);
 
     // Get user points
-    const userPoints = await queryAsync('SELECT pointsBalance FROM customers WHERE customerID = ?', [customerID]);
+    const userPoints = await queryAsync('SELECT pointsBalance FROM users WHERE userID = ?', [userID]);
     const points = userPoints[0]?.pointsBalance || 0;
 
     // Build the query to get both purchases and redemptions
     let transactionsQuery = `
       SELECT 
-        t.customerID,
+        t.userID,
         'purchase' as type,
         t.pointsChange as amount,
-        CONCAT('Payment - ₱', t.paymentAmount) as description,
+        CONCAT('Payment: ₱', t.paymentAmount) as description,
         t.date as date,
         'completed' as status
       FROM transactions t
-      WHERE t.customerID = ?
+      WHERE t.userID = ?
       
       UNION ALL
       
       SELECT 
-        r.customerID,
+        r.userID,
         'redeemed' as type,
         r.pointsUsed as amount,
         CONCAT(rew.rewardName, ' - ', rew.brand) as description,
@@ -41,10 +41,10 @@ exports.viewTransactions = async (req, res) => {
         r.redeemStatus as status
       FROM redemption r
       JOIN rewards rew ON r.rewardID = rew.rewardID
-      WHERE r.customerID = ? AND r.redeemStatus != 'denied'
+      WHERE r.userID = ? AND r.redeemStatus != 'denied'
     `;
     
-    let transactionsParams = [customerID, customerID];
+    let transactionsParams = [userID, userID];
 
     // Add type filter if specified
     if (type && type !== 'all') {
@@ -52,19 +52,19 @@ exports.viewTransactions = async (req, res) => {
         // Show only completed transactions and purchases
         transactionsQuery = `
           SELECT 
-            t.customerID,
+            t.userID,
             'purchase' as type,
             t.pointsChange as amount,
-            CONCAT('Payment - ₱', t.paymentAmount) as description,
+            CONCAT('Payment: ₱', t.paymentAmount) as description,
             t.date as date,
             'completed' as status
           FROM transactions t
-          WHERE t.customerID = ?
+          WHERE t.userID = ?
           
           UNION ALL
           
           SELECT 
-            r.customerID,
+            r.userID,
             'redeemed' as type,
             r.pointsUsed as amount,
             CONCAT(rew.rewardName, ' - ', rew.brand) as description,
@@ -72,13 +72,13 @@ exports.viewTransactions = async (req, res) => {
             r.redeemStatus as status
           FROM redemption r
           JOIN rewards rew ON r.rewardID = rew.rewardID
-          WHERE r.customerID = ? AND r.redeemStatus = 'completed'
+          WHERE r.userID = ? AND r.redeemStatus = 'completed'
         `;
       } else if (type === 'pending') {
         // Show only pending redemptions
         transactionsQuery = `
           SELECT 
-            r.customerID,
+            r.userID,
             'redeemed' as type,
             r.pointsUsed as amount,
             CONCAT(rew.rewardName, ' - ', rew.brand) as description,
@@ -86,9 +86,9 @@ exports.viewTransactions = async (req, res) => {
             r.redeemStatus as status
           FROM redemption r
           JOIN rewards rew ON r.rewardID = rew.rewardID
-          WHERE r.customerID = ? AND r.redeemStatus = 'pending'
+          WHERE r.userID = ? AND r.redeemStatus = 'pending'
         `;
-        transactionsParams = [customerID];
+        transactionsParams = [userID];
       }
     }
 
@@ -105,43 +105,43 @@ exports.viewTransactions = async (req, res) => {
     let countQuery = `
       SELECT COUNT(*) as total
       FROM (
-        SELECT t.customerID
+        SELECT t.userID
         FROM transactions t
-        WHERE t.customerID = ?
+        WHERE t.userID = ?
         
         UNION ALL
         
-        SELECT r.customerID
+        SELECT r.userID
         FROM redemption r
-        WHERE r.customerID = ? AND r.redeemStatus != 'denied'
+        WHERE r.userID = ? AND r.redeemStatus != 'denied'
       ) combined
     `;
     
-    let countParams = [customerID, customerID];
+    let countParams = [userID, userID];
 
     if (type && type !== 'all') {
       if (type === 'completed') {
         countQuery = `
           SELECT COUNT(*) as total
           FROM (
-            SELECT t.customerID
+            SELECT t.userID
             FROM transactions t
-            WHERE t.customerID = ?
+            WHERE t.userID = ?
             
             UNION ALL
             
-            SELECT r.customerID
+            SELECT r.userID
             FROM redemption r
-            WHERE r.customerID = ? AND r.redeemStatus = 'completed'
+            WHERE r.userID = ? AND r.redeemStatus = 'completed'
           ) combined
         `;
       } else if (type === 'pending') {
         countQuery = `
           SELECT COUNT(*) as total
           FROM redemption r
-          WHERE r.customerID = ? AND r.redeemStatus = 'pending'
+          WHERE r.userID = ? AND r.redeemStatus = 'pending'
         `;
-        countParams = [customerID];
+        countParams = [userID];
       }
     }
 

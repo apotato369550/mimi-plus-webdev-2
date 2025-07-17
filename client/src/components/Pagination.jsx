@@ -1,11 +1,11 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-export default function Pagination({ 
-  currentPage, 
-  totalPages, 
-  onPageChange, 
+export default function Pagination({
+  currentPage,
+  totalPages,
+  onPageChange,
   totalItems,
-  itemsPerPage 
+  itemsPerPage,
 }) {
   const startItem = (currentPage - 1) * itemsPerPage + 1;
   const endItem = Math.min(currentPage * itemsPerPage, totalItems);
@@ -13,7 +13,7 @@ export default function Pagination({
   const getPageNumbers = () => {
     const pages = [];
     const maxVisiblePages = 5;
-    
+
     if (totalPages <= maxVisiblePages) {
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
@@ -23,25 +23,25 @@ export default function Pagination({
         for (let i = 1; i <= 4; i++) {
           pages.push(i);
         }
-        pages.push('...');
+        pages.push("...");
         pages.push(totalPages);
       } else if (currentPage >= totalPages - 2) {
         pages.push(1);
-        pages.push('...');
+        pages.push("...");
         for (let i = totalPages - 3; i <= totalPages; i++) {
           pages.push(i);
         }
       } else {
         pages.push(1);
-        pages.push('...');
+        pages.push("...");
         for (let i = currentPage - 1; i <= currentPage + 1; i++) {
           pages.push(i);
         }
-        pages.push('...');
+        pages.push("...");
         pages.push(totalPages);
       }
     }
-    
+
     return pages;
   };
 
@@ -52,7 +52,7 @@ export default function Pagination({
           Showing {startItem} to {endItem} of {totalItems} results
         </span>
       </div>
-      
+
       <div className="flex items-center space-x-2">
         <button
           onClick={() => onPageChange(currentPage - 1)}
@@ -62,26 +62,28 @@ export default function Pagination({
           <ChevronLeft className="w-4 h-4" />
           Previous
         </button>
-        
+
         <div className="flex items-center space-x-1">
           {getPageNumbers().map((page, index) => (
             <button
               key={index}
-              onClick={() => typeof page === 'number' ? onPageChange(page) : null}
-              disabled={page === '...'}
+              onClick={() =>
+                typeof page === "number" ? onPageChange(page) : null
+              }
+              disabled={page === "..."}
               className={`inline-flex items-center px-3 py-1 text-sm font-medium rounded-md ${
                 page === currentPage
-                  ? 'bg-primary-600 text-white'
-                  : page === '...'
-                  ? 'text-gray-400 cursor-default'
-                  : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                  ? "bg-primary-500 text-white"
+                  : page === "..."
+                    ? "text-gray-400 cursor-default"
+                    : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"
               }`}
             >
               {page}
             </button>
           ))}
         </div>
-        
+
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}

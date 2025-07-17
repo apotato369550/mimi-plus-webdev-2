@@ -1,11 +1,19 @@
-export default function Button({ variant = "primary", size = "default", children, onClick, disabled = false, ...props }) {
+export default function Button({
+  variant = "primary",
+  size = "default",
+  children,
+  onClick,
+  disabled = false,
+  ...props
+}) {
   const variants = {
-    primary: "bg-primary-600 hover:bg-primary-700 text-white",
+    primary: "bg-primary-500 hover:bg-primary-700 text-white",
     secondary: "bg-white hover:bg-gray-50 border border-gray-300 text-gray-700",
     outline: "bg-white hover:bg-gray-50 border border-gray-300 text-gray-700",
     ghost: "bg-transparent hover:bg-gray-100 text-gray-700",
     borderless: "bg-transparent hover:bg-gray-100 text-gray-700",
-    card: "bg-primary-600 hover:bg-primary-700 text-white w-full",
+    card: "bg-primary-500 hover:bg-primary-700 text-white w-full",
+    destroy: "bg-red-600 hover:bg-primary-700 text-white",
   };
 
   const sizes = {
@@ -15,7 +23,8 @@ export default function Button({ variant = "primary", size = "default", children
     icon: "h-10 w-10",
   };
 
-  const baseClasses = "rounded-lg text-center transition-colors duration-200 whitespace-nowrap font-medium";
+  const baseClasses =
+    "rounded-lg text-center transition-colors duration-200 whitespace-nowrap font-medium focus:outline-none focus:ring-0";
   const variantClasses = variants[variant] || variants.primary;
   const sizeClasses = sizes[size] || sizes.default;
   const disabledClasses = disabled ? "opacity-50 cursor-not-allowed" : "";
@@ -31,4 +40,3 @@ export default function Button({ variant = "primary", size = "default", children
     </button>
   );
 }
-

@@ -38,3 +38,11 @@ exports.adminVerify = (req, res, next) => {
     return res.status(403).json({ message: "Access Denied: Admins Only"});
   }
 }
+
+exports.authenticateStaff = (req, res, next) => {
+  if (req.user && (req.user.role === 'staff' || req.user.role === 'admin')) {
+    next();
+  } else {
+    return res.status(403).json({ message: "Access Denied: Staff Only" });
+  }
+};

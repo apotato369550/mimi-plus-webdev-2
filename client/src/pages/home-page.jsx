@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import Header from "../components/Header.jsx";
-import Content from "../components/Content.jsx";
 import MetricCard from "../components/MetricCard.jsx";
 import HomepageRewardCard from "../components/HomepageRewardCard.jsx";
 import Button from "../components/Button.jsx";
+import QRCodeModal from "../components/QRCodeModal.jsx";
 import { QrCode, Gift, Clock } from "lucide-react";
 import RecentTransactions from "../components/RecentTransactions.jsx";
 
@@ -13,14 +13,19 @@ export default function HomePage() {
   const [rewards, setRewards] = useState([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [showQRCode, setShowQRCode] = useState(false);
+  const [userName, setUserName] = useState("");
 
   useEffect(() => {
     // Check user role and redirect if admin
     const user = JSON.parse(localStorage.getItem("user") || "{}");
-    if (user.role === 'admin') {
+    if (user.role === "admin") {
       window.location.href = "/admindashboard";
       return;
     }
+    
+    // Set user name from local storage
+    setUserName(user.name || "");
 
     const fetchHomeData = async () => {
       try {
@@ -124,13 +129,13 @@ export default function HomePage() {
   return (
     <>
       <Header />
-      <Content>
-        <div className="flex justify-between items-center w-full py-4">
+      <div className="flex flex-col bg-gray-50 h-[calc(100vh-65px)] w-full px-4 py-3 gap-4">
+        <div className="flex justify-between items-center w-full">
           <div>
-            <h3 className="font-semibold text-gray-900">Welcome Back Jose</h3>
+            <h3 className="font-semibold text-gray-900">Welcome Back{userName ? `, ${userName}` : ''}</h3>
             <p className="text-gray-600">Track and manage your Mimi+ points!</p>
           </div>
-          <Button>
+          <Button onClick={() => setShowQRCode(true)}>
             <div className="flex gap-2">
               <QrCode /> QR
             </div>
@@ -146,7 +151,7 @@ export default function HomePage() {
         )}
 
         {points && (
-          <div className="flex justify-between gap-2 w-full">
+          <div className="flex justify-between gap-2 w-full h-full">
             <div className="flex flex-col gap-8 w-full">
               <div className="flex gap-2">
                 <MetricCard
@@ -166,7 +171,7 @@ export default function HomePage() {
               <div className="flex flex-col gap-6">
                 <h3 className="font-semibold">Quick Rewards</h3>
                 {rewards.length === 0 ? (
-                  <div className="flex justify-center items-center h-32 border border-gray-300 rounded-lg">
+                  <div className="flex justify-center items-center h-[640px] border border-gray-300 rounded-lg">
                     <div className="text-center">
                       <Gift className="h-8 w-8 text-gray-400 mx-auto mb-2" />
                       <p className="text-gray-600">
@@ -179,25 +184,27 @@ export default function HomePage() {
                   </div>
                 ) : (
                   <div className="flex flex-wrap gap-2 pb-5">
-                    {rewards.map((reward) => (
-                      <HomepageRewardCard
-                        key={reward.rewardID}
-                        icon={<Gift />}
-                        product={reward.rewardName}
-                        brand={reward.brand}
-                        description={reward.description}
-                        category={reward.category}
-                        points={reward.pointsRequired}
-                        rewardID={reward.rewardID}
-                        onRedeem={handleRedeem}
-                      />
-                    ))}
+                    {rewards
+                      .filter((reward) => reward.isActive === "active")
+                      .map((reward) => (
+                        <HomepageRewardCard
+                          key={reward.rewardID}
+                          icon={<Gift />}
+                          product={reward.rewardName}
+                          brand={reward.brand}
+                          description={reward.description}
+                          category={reward.category}
+                          points={reward.pointsRequired}
+                          rewardID={reward.rewardID}
+                          onRedeem={handleRedeem}
+                        />
+                      ))}
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="h-fit flex rounded-[8px] flex-col border border-gray-300 w-[402px] px-6 py-5 gap-6">
+            <div className="flex rounded-[8px] bg-white flex-col border border-gray-300 h-[800px] w-[600px] px-6 py-5 gap-6">
               <div className="flex items-center gap-3">
                 <Clock />
                 <p className="text-lg font-semibold">Recent Transactions</p>
@@ -206,7 +213,9 @@ export default function HomePage() {
             </div>
           </div>
         )}
-      </Content>
+      </div>
+
+      <QRCodeModal isOpen={showQRCode} onClose={() => setShowQRCode(false)} />
     </>
   );
 }

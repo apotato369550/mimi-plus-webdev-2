@@ -1,8 +1,15 @@
 const db = require("./dbconn");
-
 const { promisify } = require("util");
 
-const queryAsync = promisify(db.query).bind(db);
+// Promisify the query method for the pool
+const queryAsync = (sql, values) => {
+  return new Promise((resolve, reject) => {
+    db.query(sql, values, (err, results) => {
+      if (err) reject(err);
+      else resolve(results);
+    });
+  });
+};
 
 // Utility function to disable foreign key checks
 const disableForeignKeyChecks = async () => {
@@ -24,8 +31,19 @@ const enableForeignKeyChecks = async () => {
   }
 };
 
+// Get a connection from the pool with promise
+const getConnection = () => {
+  return new Promise((resolve, reject) => {
+    db.getConnection((err, connection) => {
+      if (err) reject(err);
+      else resolve(connection);
+    });
+  });
+};
+
 module.exports = {
   queryAsync,
   disableForeignKeyChecks,
   enableForeignKeyChecks,
+  getConnection
 };

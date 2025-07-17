@@ -7,25 +7,113 @@ import ProcessPending from "../components/ProcessPending.jsx";
 import { ProcessPurchasesModal } from "../components/ProcessPurchase.jsx";
 import { AddRewardModal } from "../components/AddReward.jsx";
 import { DeleteRewardModal } from "../components/DeleteReward.jsx";
-import { DeleteCustomerModal } from "../components/DeleteCustomer.jsx";
-import { Calendar, Gift, Plus, LucideTrash } from "lucide-react";
+import { DeleteUserModal } from "../components/DeleteUser.jsx";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../components/Dialog";
+import { Label } from "../components/Label";
+import {
+  Settings,
+  Calendar,
+  Plus,
+  Trash2,
+  HandCoins,
+  Gift,
+  Users,
+} from "lucide-react";
+
+function AdjustPointsRatioModal({ isOpen, onClose, onSave, currentRatio }) {
+  const [ratio, setRatio] = useState(currentRatio || 50);
+  useEffect(() => {
+    setRatio(currentRatio || 50);
+  }, [currentRatio, isOpen]);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSave(Number(ratio));
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Adjust Points Ratio</DialogTitle>
+          <DialogDescription>
+            Set how many pesos are required to earn 1 point.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="ratio">Pesos per 1 Point</Label>
+              <input
+                id="ratio"
+                type="number"
+                min={1}
+                className="flex h-10 w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={ratio}
+                onChange={e => setRatio(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onClose}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+            >
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export default function AdminDashboard() {
   const [dashboardData, setDashboardData] = useState(null);
   const [transactions, setTransactions] = useState([]);
+  const [transactionsLoading, setTransactionsLoading] = useState(true);
+  const [transactionsError, setTransactionsError] = useState(null);
   const [topCustomers, setTopCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showPending, setShowPending] = useState(false);
   const [showProcessPurchases, setShowProcessPurchases] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
   const [showAddReward, setShowAddReward] = useState(false);
   const [showDeleteReward, setShowDeleteReward] = useState(false);
-  const [showDeleteCustomer, setShowDeleteCustomer] = useState(false);
+  const [showDeleteUser, setShowDeleteUser] = useState(false);
+  const [showAdjustPoints, setShowAdjustPoints] = useState(false);
+  const [pointsRatio, setPointsRatio] = useState(() => Number(localStorage.getItem("pointsRatio")) || 50);
+  const [users, setUsers] = useState([]);
 
   useEffect(() => {
     fetchDashboardData();
     fetchTransactions();
     fetchTopCustomers();
+    fetchUsers();
   }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch("/api/admin/users", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setUsers(data.users || []);
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -44,18 +132,28 @@ export default function AdminDashboard() {
   };
 
   const fetchTransactions = async () => {
+    setTransactionsLoading(true);
+    setTransactionsError(null);
     try {
-      const response = await fetch("/api/admin/transactions?limit=5", {
+      const response = await fetch("/api/admin/transactions?limit=10", {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
       if (response.ok) {
         const data = await response.json();
-        setTransactions(data.transactions);
+        setTransactions(data.transactions || []);
+      } else {
+        const errorData = await response.json();
+        setTransactionsError(errorData.message || 'Failed to fetch transactions');
+        // Keep the previous transactions data
       }
     } catch (error) {
       console.error("Error fetching transactions:", error);
+      setTransactionsError('Failed to fetch transactions');
+      // Keep the previous transactions data
+    } finally {
+      setTransactionsLoading(false);
     }
   };
 
@@ -68,10 +166,10 @@ export default function AdminDashboard() {
       });
       if (response.ok) {
         const data = await response.json();
-        setTopCustomers(data.customers);
+        setTopCustomers(data.users);
       }
     } catch (error) {
-      console.error("Error fetching top customers:", error);
+      console.error("Error fetching top users:", error);
     } finally {
       setLoading(false);
     }
@@ -92,11 +190,17 @@ export default function AdminDashboard() {
   };
 
   const handleShowProcessPurchases = () => {
-    setShowProcessPurchases(true);
+    if (users.length > 0) {
+      setSelectedUser(users[0]); // Select first user by default
+      setShowProcessPurchases(true);
+    } else {
+      alert("No users available. Please add users first.");
+    }
   };
 
   const handleCloseProcessPurchases = () => {
     setShowProcessPurchases(false);
+    setSelectedUser(null);
   };
 
   const handleShowAddReward = () => {
@@ -115,12 +219,12 @@ export default function AdminDashboard() {
     setShowDeleteReward(false);
   };
 
-  const handleShowDeleteCustomer = () => {
-    setShowDeleteCustomer(true);
+  const handleShowDeleteUser = () => {
+    setShowDeleteUser(true);
   };
 
-  const handleCloseDeleteCustomer = () => {
-    setShowDeleteCustomer(false);
+  const handleCloseDeleteUser = () => {
+    setShowDeleteUser(false);
   };
 
   const handleDeleteReward = async (rewardId) => {
@@ -182,8 +286,13 @@ export default function AdminDashboard() {
   };
 
   const handleProcessPurchase = async (purchaseData) => {
+    if (!selectedUser) {
+      alert("Please select a user first");
+      return;
+    }
+
     try {
-      console.log("Sending purchase data:", purchaseData);
+      console.log("Sending purchase data:", { ...purchaseData, userId: selectedUser.userID });
 
       const response = await fetch("/api/admin/process-purchase", {
         method: "POST",
@@ -191,7 +300,10 @@ export default function AdminDashboard() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
-        body: JSON.stringify(purchaseData),
+        body: JSON.stringify({
+          ...purchaseData,
+          userId: selectedUser.userID
+        }),
       });
 
       const responseData = await response.json();
@@ -201,6 +313,7 @@ export default function AdminDashboard() {
         await fetchDashboardData();
         await fetchTransactions();
         await fetchTopCustomers();
+        handleCloseProcessPurchases();
         console.log("Purchase processed successfully:", responseData);
       } else {
         console.error("Server error:", responseData);
@@ -216,11 +329,11 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleDeleteCustomer = async (customerId) => {
+  const handleDeleteUser = async (userId) => {
     try {
-      console.log("Deleting customer:", customerId);
-      
-      const response = await fetch(`/api/admin/customers/${customerId}`, {
+      console.log("Deleting user:", userId);
+
+      const response = await fetch(`/api/admin/users/${userId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -230,18 +343,34 @@ export default function AdminDashboard() {
       const responseData = await response.json();
 
       if (response.ok) {
-        console.log("Customer deleted successfully:", responseData);
-        // Refresh dashboard data after successful deletion
+        console.log("User deleted successfully:", responseData);
         await fetchDashboardData();
         await fetchTopCustomers();
       } else {
         console.error("Server error:", responseData);
-        alert(`Error deleting customer: ${responseData.message || "Unknown error"}`);
+        alert(
+          `Error deleting user: ${responseData.message || "Unknown error"}`,
+        );
       }
     } catch (error) {
-      console.error("Error deleting customer:", error);
-      alert("Error deleting customer. Please check your connection and try again.");
+      console.error("Error deleting user:", error);
+      alert(
+        "Error deleting user. Please check your connection and try again.",
+      );
     }
+  };
+
+  const handleShowAdjustPoints = () => setShowAdjustPoints(true);
+  const handleCloseAdjustPoints = () => setShowAdjustPoints(false);
+  const handleSaveAdjustPoints = (newRatio) => {
+    setPointsRatio(newRatio);
+    localStorage.setItem("pointsRatio", newRatio);
+    setShowAdjustPoints(false);
+    alert(`Points ratio updated: ₱${newRatio} per 1 point`);
+  };
+
+  const handleViewUsers = () => {
+    window.location.href = "/admin/customers";
   };
 
   if (loading) {
@@ -265,6 +394,7 @@ export default function AdminDashboard() {
         isOpen={showProcessPurchases}
         onClose={handleCloseProcessPurchases}
         onProcess={handleProcessPurchase}
+        selectedUser={selectedUser}
       />
       <AddRewardModal
         isOpen={showAddReward}
@@ -276,25 +406,31 @@ export default function AdminDashboard() {
         onClose={handleCloseDeleteReward}
         onDelete={handleDeleteReward}
       />
-      <DeleteCustomerModal
-        isOpen={showDeleteCustomer}
-        onClose={handleCloseDeleteCustomer}
-        onDelete={handleDeleteCustomer}
+      <DeleteUserModal
+        isOpen={showDeleteUser}
+        onClose={handleCloseDeleteUser}
+        onDelete={handleDeleteUser}
       />
-      <div className="flex">
-        <div className="flex flex-col border-r border-gray-300 h-screen w-full p-6 gap-4">
+      <AdjustPointsRatioModal
+        isOpen={showAdjustPoints}
+        onClose={handleCloseAdjustPoints}
+        onSave={handleSaveAdjustPoints}
+        currentRatio={pointsRatio}
+      />
+      <div className="flex w-screen">
+        <div className="flex bg-gray-50 flex-col border-r border-gray-300 h-[calc(100vh-65px)] w-full px-4 py-3 gap-4">
           <h3 className="font-bold">Dashboard</h3>
-          <div className="flex gap-6">
+          <div className="flex gap-6 pb-8">
             <MetricCard
-              header="Total Customers"
-              digit={dashboardData?.totalCustomers || 0}
+              header="Total Users"
+              digit={dashboardData?.totalUsers || 0}
             />
             <MetricCard
-              header="Active Members"
+              header="Rewards Issued"
               digit={dashboardData?.thisMonthActive || 0}
             />
             <MetricCard
-              header="Points Redeemed"
+              header="Points Issued"
               digit={dashboardData?.thisMonthRedeemed || 0}
             />
             <MetricCard
@@ -302,113 +438,127 @@ export default function AdminDashboard() {
               digit={dashboardData?.thisMonthPending || 0}
             />
           </div>
-          <div className="flex flex-col border border-gray-300 rounded-[8px] gap-8 px-6 py-5">
+          <div className="flex bg-white flex-col border border-gray-200 rounded-[8px] gap-8 px-6 pt-5 pb-10">
             <div>
-              <h4 className="font-bold text-gray-900">Recent Transactions</h4>
-              <p className="text-gray-600">
+              <p className="text-lg font-bold text-gray-900">
+                Recent Transactions
+              </p>
+              <p className="text-sm text-gray-600">
                 A list of the recent transactions from Mimi+ users
               </p>
             </div>
             <div>
-              <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+              <table className="w-full text-sm text-left rtl:text-right text-gray-500">
+                <thead className="text-xs text-gray-700 uppercase bg-white">
                   <tr>
-                    <th scope="col" className="px-6 py-3">
-                      ID
-                    </th>
-                    <th scope="col" className="px-6 py-3">
-                      Date
-                    </th>
-                    <th scope="col" className="px-6 py-3">
-                      Name
-                    </th>
-                    <th scope="col" className="px-6 py-3">
-                      Type
-                    </th>
-                    <th scope="col" className="px-6 py-3">
-                      Description
-                    </th>
-                    <th scope="col" className="px-6 py-3">
-                      Points
-                    </th>
+                    <th scope="col" className="px-6 py-3">Date</th>
+                    <th scope="col" className="px-6 py-3">Name</th>
+                    <th scope="col" className="px-6 py-3">Type</th>
+                    <th scope="col" className="px-6 py-3">Description</th>
+                    <th scope="col" className="px-6 py-3">Points</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {transactions.map((transaction) => (
-                    <tr
-                      key={transaction.id}
-                      className="odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700 border-gray-200"
-                    >
-                      <th
-                        scope="row"
-                        className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white"
-                      >
-                        {transaction.id}
-                      </th>
-                      <td className="px-6 py-4">{transaction.date}</td>
-                      <td className="px-6 py-4">{transaction.name}</td>
-                      <td className="px-6 py-4">{transaction.type}</td>
-                      <td className="px-6 py-4">{transaction.description}</td>
-                      <td className="px-6 py-4">{transaction.points}</td>
+                  {transactionsLoading ? (
+                    <tr>
+                      <td colSpan="5" className="px-6 py-4 text-center">Loading transactions...</td>
                     </tr>
-                  ))}
+                  ) : transactionsError ? (
+                    <tr>
+                      <td colSpan="5" className="px-6 py-4 text-center text-red-500">{transactionsError}</td>
+                    </tr>
+                  ) : transactions.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="px-6 py-4 text-center">No transactions found</td>
+                    </tr>
+                  ) : (
+                    transactions.map((transaction) => (
+                      <tr key={transaction.id} className="border-b border-gray-200">
+                        <td className="px-6 py-4">{transaction.date}</td>
+                        <td className="px-6 py-4">{transaction.name}</td>
+                        <td className="px-6 py-4">{transaction.type}</td>
+                        <td className="px-6 py-4">{transaction.description}</td>
+                        <td className="px-6 py-4">{transaction.points}</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
           </div>
         </div>
-        <div className="flex flex-col w-[540px] p-6 gap-6">
-          <div className="flex flex-col border border-gray-300 p-6 gap-5">
+        <div className="flex flex-col w-[380px] p-6 gap-6">
+          <div className="flex flex-col p-4 gap-2">
             <div className="flex justify-between items-center">
-              <h4 className="font-semibold">Quick Actions</h4>
-              <Calendar className="w-5 h-5 text-gray-500" />
+              <p className="font-semibold text-lg">Quick Actions</p>
+              <Calendar className="text-gray-500" size={16} />
             </div>
-            <div className="flex flex-col gap-4">
-              <Button onClick={handleShowPending} disabled={false}>
-                <div className="flex justify-center">
-                  <Plus className="mr-4" />
+            <div className="flex flex-col gap-3">
+              <Button
+                variant="primary"
+                onClick={handleShowPending}
+                disabled={false}
+              >
+                <div className="flex ml-8 items-center text-sm">
+                  <Plus className="mr-4" size={16} />
                   Process Pending
                 </div>
               </Button>
-              <Button onClick={handleShowProcessPurchases} disabled={false}>
-                <div className="flex justify-center">
-                  <Plus className="mr-4" />
-                  Process Purchases
-                </div>
-              </Button>
-              <Button onClick={handleShowAddReward} disabled={false}>
-                <div className="flex justify-center">
-                  <Plus className="mr-4" />
+              <Button
+                variant="secondary"
+                onClick={handleShowAddReward}
+                disabled={false}
+              >
+                <div className="flex ml-8 items-center text-sm">
+                  <Gift className="mr-4" size={16} />
                   Add Reward
                 </div>
               </Button>
-              <Button onClick={handleShowDeleteReward} disabled={false}>
-                <div className="flex justify-center">
-                  <LucideTrash className="mr-4" />
+              <Button
+                variant="secondary"
+                onClick={handleShowDeleteReward}
+                disabled={false}
+              >
+                <div className="flex ml-8 items-center text-sm">
+                  <Trash2 className="mr-4" size={16} />
                   Delete Reward
                 </div>
               </Button>
-              <Button onClick={handleShowDeleteCustomer} disabled={false}>
-                <div className="flex justify-center">
-                  <LucideTrash className="mr-4" />
-                  Delete Customer
+              <Button
+                variant="secondary"
+                onClick={handleShowDeleteUser}
+                disabled={false}
+              >
+                <div className="flex ml-8 items-center text-sm">
+                  <Trash2 className="mr-4" size={16} />
+                  Delete User
+                </div>
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={handleShowAdjustPoints}
+                disabled={false}
+              >
+                <div className="flex ml-8 items-center text-sm">
+                  <Settings className="mr-4" size={16} />
+                  Adjust Points Ratio
                 </div>
               </Button>
             </div>
           </div>
-          <div className="flex flex-col border border-gray-300 p-6 gap-5">
+          <div className="flex flex-col p-4 gap-2">
             <div className="flex justify-between items-center">
-              <h4 className="font-semibold">Top Customers</h4>
-              <Calendar className="w-5 h-5 text-gray-500" />
+              <p className="text-lg font-semibold">Top Customers</p>
+              <Calendar className="text-gray-500" size={16} />
             </div>
-            <div className="flex flex-col gap-4">
-              {topCustomers.map((customer, index) => (
+            <div className="flex flex-col gap-8">
+              {topCustomers.map((user, index) => (
                 <TopCustomers
                   key={index}
                   index={index + 1}
-                  name={customer.name}
-                  purchases={customer.purchases}
-                  points={customer.points}
+                  name={user.name}
+                  purchases={user.purchases}
+                  points={user.points}
                 />
               ))}
             </div>

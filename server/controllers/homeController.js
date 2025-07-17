@@ -16,17 +16,17 @@ const { queryAsync } = require("../database/utils");
 
 exports.viewHome = async (req, res) => {
   try {
-    const customerID = req.user.customerID;
-    console.log("Fetching home data for customerID:", customerID);
+    const userID = req.user.userID;
+    console.log("Fetching home data for userID:", userID);
 
     const userResult = await queryAsync(
-      "SELECT pointsBalance, totalEarnedLifetime, totalRedeemedLifetime FROM customers WHERE customerID = ?",
-      [customerID],
+      "SELECT pointsBalance, totalEarnedLifetime, totalRedeemedLifetime FROM users WHERE userID = ?",
+      [userID],
     );
 
     if (userResult.length === 0) {
-      console.log("Customer not found for ID:", customerID);
-      return res.status(404).json({ message: "Customer not found" });
+      console.log("User not found for ID:", userID);
+      return res.status(404).json({ message: "User not found" });
     }
 
     const pointsAvailable = userResult[0].pointsBalance;
@@ -45,14 +45,14 @@ exports.viewHome = async (req, res) => {
 
     // Get last month's earned points (from transactions or redemptions)
     const lastMonthEarnedResult = await queryAsync(
-      "SELECT COALESCE(SUM(pointsUsed), 0) as lastMonthEarned FROM redemption WHERE customerID = ? AND dateRedeemed BETWEEN ? AND ?",
-      [customerID, lastMonthStart, lastMonthEnd]
+      "SELECT COALESCE(SUM(pointsUsed), 0) as lastMonthEarned FROM redemption WHERE userID = ? AND dateRedeemed BETWEEN ? AND ?",
+      [userID, lastMonthStart, lastMonthEnd]
     );
 
     // Get last month's redeemed points
     const lastMonthRedeemedResult = await queryAsync(
-      "SELECT COALESCE(SUM(pointsUsed), 0) as lastMonthRedeemed FROM redemption WHERE customerID = ? AND dateRedeemed BETWEEN ? AND ? AND redeemStatus = 'completed'",
-      [customerID, lastMonthStart, lastMonthEnd]
+      "SELECT COALESCE(SUM(pointsUsed), 0) as lastMonthRedeemed FROM redemption WHERE userID = ? AND dateRedeemed BETWEEN ? AND ? AND redeemStatus = 'completed'",
+      [userID, lastMonthStart, lastMonthEnd]
     );
 
     // Get last month's available points (this would be the balance at the end of last month)
@@ -62,13 +62,13 @@ exports.viewHome = async (req, res) => {
     thisMonthStart.setHours(0, 0, 0, 0);
 
     const thisMonthEarnedResult = await queryAsync(
-      "SELECT COALESCE(SUM(pointsUsed), 0) as thisMonthEarned FROM redemption WHERE customerID = ? AND dateRedeemed >= ?",
-      [customerID, thisMonthStart]
+      "SELECT COALESCE(SUM(pointsUsed), 0) as thisMonthEarned FROM redemption WHERE userID = ? AND dateRedeemed >= ?",
+      [userID, thisMonthStart]
     );
 
     const thisMonthRedeemedResult = await queryAsync(
-      "SELECT COALESCE(SUM(pointsUsed), 0) as thisMonthRedeemed FROM redemption WHERE customerID = ? AND dateRedeemed >= ? AND redeemStatus = 'completed'",
-      [customerID, thisMonthStart]
+      "SELECT COALESCE(SUM(pointsUsed), 0) as thisMonthRedeemed FROM redemption WHERE userID = ? AND dateRedeemed >= ? AND redeemStatus = 'completed'",
+      [userID, thisMonthStart]
     );
 
     const lastMonthEarned = lastMonthEarnedResult[0].lastMonthEarned;
@@ -107,19 +107,19 @@ exports.viewHome = async (req, res) => {
  ******************************************************************/
 
 exports.quickRedeem = async (req, res) => {
-  const customerID = req.user.customerID;
+  const userID = req.user.userID;
   const { rewardID } = req.body;
 
-  console.log("Quick redeem request - customerID:", customerID, "rewardID:", rewardID);
+  console.log("Quick redeem request - userID:", userID, "rewardID:", rewardID);
 
   try {
     const userPoints = await queryAsync(
-      "SELECT pointsBalance FROM customers WHERE customerID = ?",
-      [customerID],
+      "SELECT pointsBalance FROM users WHERE userID = ?",
+      [userID],
     );
 
     if (userPoints.length === 0) {
-      console.log("User not found for ID:", customerID);
+      console.log("User not found for ID:", userID);
       return res.status(404).json({ message: "User not found" });
     }
 
@@ -147,14 +147,14 @@ exports.quickRedeem = async (req, res) => {
     }
 
     //After redeeming reward it will go to pending
-    //await queryAsync('UPDATE customers SET pointsBalance = pointsBalance - ? WHERE customerID = ?', [rewardCost, customerID]);
+    //await queryAsync('UPDATE users SET pointsBalance = pointsBalance - ? WHERE userID = ?', [rewardCost, userID]);
 
     await queryAsync(
-      "INSERT INTO redemption (customerID, rewardID, dateRedeemed, pointsUsed, redeemStatus) VALUES (?, ?, NOW(), ?, ?)",
-      [customerID, rewardID, rewardCost, "pending"],
+      "INSERT INTO redemption (userID, rewardID, dateRedeemed, pointsUsed, redeemStatus) VALUES (?, ?, NOW(), ?, ?)",
+      [userID, rewardID, rewardCost, "pending"],
     );
 
-    console.log("Reward redeemed successfully for customerID:", customerID);
+    console.log("Reward redeemed successfully for userID:", userID);
     res.status(200).json({ message: "Reward added to pending" });
   } catch (error) {
     console.error("Error in quickRedeem:", error);
@@ -165,6 +165,6 @@ exports.quickRedeem = async (req, res) => {
 };
 
 exports.recentActivity = async (req, res) => {
-  const customerID = req.user.customerID;
+  const userID = req.user.customerID;
   const { rewardID } = req.body;
 };

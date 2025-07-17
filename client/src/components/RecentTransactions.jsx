@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { ArrowDownLeft } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
 
 export default function RecentTransactions() {
   const [transactions, setTransactions] = useState([]);
@@ -38,7 +38,7 @@ export default function RecentTransactions() {
       <div className="flex justify-between items-center">
         <div className="flex justify-center items-center gap-3">
           <div className="p-2 bg-emerald-300 rounded-2xl">
-            <ArrowDownLeft className="h-4 w-4" />
+            <ArrowUpRight className="h-4 w-4" />
           </div>
           <div>
             <p className="text-gray-600">No recent transactions</p>
@@ -60,7 +60,11 @@ export default function RecentTransactions() {
             <div className={`p-2 rounded-2xl ${
               transaction.type === 'redeemed' ? 'bg-red-300' : 'bg-emerald-300'
             }`}>
-              <ArrowDownLeft className="h-4 w-4" />
+              {transaction.type === 'redeemed' ? (
+                <ArrowDownLeft className="h-4 w-4" />
+              ) : (
+                <ArrowUpRight className="h-4 w-4" />
+              )}
             </div>
             <div>
               <p className="text-sm font-medium">{transaction.description}</p>

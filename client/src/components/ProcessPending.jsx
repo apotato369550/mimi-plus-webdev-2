@@ -1,7 +1,15 @@
 import { useState, useEffect } from "react";
 import Button from "./Button.jsx";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "./Dialog";
 
-export default function ProcessPending({ open, onClose, onApprove }) {
+export default function ProcessPending({ open, onClose, onApprove, selectedUser, variant = "admin" }) {
   const [pendingRedemptions, setPendingRedemptions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -14,24 +22,31 @@ export default function ProcessPending({ open, onClose, onApprove }) {
       setSelectedItems([]);
       setSelectAll(false);
     }
-  }, [open]);
+  }, [open, selectedUser]);
 
   const fetchPendingRedemptions = async () => {
     setLoading(true);
     setMessage("");
     try {
-      const response = await fetch("/api/admin/pending-redemptions", {
+      const endpoint = variant === "admin" 
+        ? `/api/admin/pending-redemptions`
+        : `/api/staff/redemptions/${selectedUser.userID}?status=pending`;
+
+      const response = await fetch(endpoint, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
       if (response.ok) {
         const data = await response.json();
+        console.log("Fetched pending redemptions:", data);
         setPendingRedemptions(data.pendingRedemptions || []);
       } else {
+        console.error("Failed to fetch pending redemptions:", response.status);
         setPendingRedemptions([]);
       }
     } catch (error) {
+      console.error("Error fetching redemptions:", error);
       setPendingRedemptions([]);
     } finally {
       setLoading(false);
@@ -41,7 +56,7 @@ export default function ProcessPending({ open, onClose, onApprove }) {
   const handleSelectAll = (checked) => {
     setSelectAll(checked);
     if (checked) {
-      setSelectedItems(pendingRedemptions.map((item) => item.id));
+      setSelectedItems(pendingRedemptions.map((item) => item.redeemID));
     } else {
       setSelectedItems([]);
     }
@@ -64,7 +79,11 @@ export default function ProcessPending({ open, onClose, onApprove }) {
     setLoading(true);
     setMessage("");
     try {
-      const response = await fetch("/api/admin/process-pending", {
+      const endpoint = variant === "admin"
+        ? `/api/admin/process-pending`
+        : `/api/staff/redemptions/process`;
+
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -88,7 +107,7 @@ export default function ProcessPending({ open, onClose, onApprove }) {
       } else {
         const errorData = await response.json();
         setMessage(
-          errorData.message || "Failed to process pending redemptions",
+          errorData.message || "Failed to process redemptions",
         );
       }
     } catch (error) {
@@ -107,7 +126,11 @@ export default function ProcessPending({ open, onClose, onApprove }) {
     setLoading(true);
     setMessage("");
     try {
-      const response = await fetch("/api/admin/process-pending", {
+      const endpoint = variant === "admin"
+        ? `/api/admin/process-pending`
+        : `/api/staff/redemptions/process`;
+
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -131,7 +154,7 @@ export default function ProcessPending({ open, onClose, onApprove }) {
       } else {
         const errorData = await response.json();
         setMessage(
-          errorData.message || "Failed to process pending redemptions",
+          errorData.message || "Failed to process redemptions",
         );
       }
     } catch (error) {
@@ -141,35 +164,32 @@ export default function ProcessPending({ open, onClose, onApprove }) {
     }
   };
 
-  if (!open) return null;
+  if (!open || (variant === "staff" && !selectedUser)) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-6xl p-6 relative">
-        <button
-          className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl"
-          onClick={onClose}
-          aria-label="Close"
-        >
-          ×
-        </button>
-        <h4 className="font-bold text-gray-900 mb-2">
-          Process Pending Redemptions
-        </h4>
-        <p className="text-gray-600 mb-4">
-          Select redemptions to approve or deny below.
-        </p>
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            {variant === "admin" 
+              ? "Process Pending Redemptions"
+              : `Process Pending Redemptions for ${selectedUser.name}`}
+          </DialogTitle>
+          <DialogDescription>
+            Select redemptions to approve or deny below.
+          </DialogDescription>
+        </DialogHeader>
 
-        {loading && (
-          <div className="text-center py-4">
-            <p className="text-gray-500">Loading...</p>
-          </div>
-        )}
-
-        <div className="max-h-80 overflow-y-auto">
-          {pendingRedemptions.length === 0 ? (
+        <div className="max-h-[60vh] overflow-y-auto">
+          {loading ? (
+            <div className="text-center py-4">
+              <p className="text-gray-500">Loading...</p>
+            </div>
+          ) : pendingRedemptions.length === 0 ? (
             <div className="text-gray-500 text-center py-8">
-              No pending redemptions.
+              {variant === "admin"
+                ? "No pending redemptions."
+                : `No pending redemptions for ${selectedUser.name}.`}
             </div>
           ) : (
             <table className="w-full text-sm text-left text-gray-500 mb-4">
@@ -180,38 +200,48 @@ export default function ProcessPending({ open, onClose, onApprove }) {
                       type="checkbox"
                       checked={selectAll}
                       onChange={(e) => handleSelectAll(e.target.checked)}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                      className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500"
                     />
                   </th>
-                  <th className="px-4 py-2">ID</th>
+                  <th className="px-4 py-2">Redeem ID</th>
                   <th className="px-4 py-2">Date</th>
-                  <th className="px-4 py-2">Name</th>
-                  <th className="px-4 py-2">Description</th>
+                  {variant === "admin" && <th className="px-4 py-2">Customer</th>}
+                  <th className="px-4 py-2">Reward</th>
                   <th className="px-4 py-2">Points</th>
                   <th className="px-4 py-2">Status</th>
                 </tr>
               </thead>
               <tbody>
-                {pendingRedemptions.map((tx) => (
-                  <tr key={tx.id} className="border-b hover:bg-gray-50">
+                {pendingRedemptions.map((redemption) => (
+                  <tr key={redemption.redeemID} className="border-b hover:bg-gray-50">
                     <td className="px-4 py-2">
                       <input
                         type="checkbox"
-                        checked={selectedItems.includes(tx.id)}
+                        checked={selectedItems.includes(redemption.redeemID)}
                         onChange={(e) =>
-                          handleSelectItem(tx.id, e.target.checked)
+                          handleSelectItem(redemption.redeemID, e.target.checked)
                         }
-                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                        className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500"
                       />
                     </td>
-                    <td className="px-4 py-2">{tx.id}</td>
-                    <td className="px-4 py-2">{tx.date}</td>
-                    <td className="px-4 py-2">{tx.name}</td>
-                    <td className="px-4 py-2">{tx.description}</td>
-                    <td className="px-4 py-2">{tx.points}</td>
+                    <td className="px-4 py-2 text-gray-900">#{redemption.redeemID}</td>
+                    <td className="px-4 py-2">
+                      {new Date(redemption.dateRedeemed).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </td>
+                    {variant === "admin" && <td className="px-4 py-2">{redemption.customerName}</td>}
+                    <td className="px-4 py-2">{redemption.rewardName}</td>
+                    <td className="px-4 py-2">
+                      <span className="text-red-600">
+                        -{redemption.pointsUsed}
+                      </span>
+                    </td>
                     <td className="px-4 py-2">
                       <span className="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
-                        {tx.status}
+                        {redemption.redeemStatus}
                       </span>
                     </td>
                   </tr>
@@ -233,30 +263,32 @@ export default function ProcessPending({ open, onClose, onApprove }) {
           </div>
         )}
 
-        <div className="flex gap-4 justify-between mt-4">
-          <div className="text-sm text-gray-600">
-            {selectedItems.length} of {pendingRedemptions.length} selected
+        <DialogFooter>
+          <div className="flex gap-4 justify-between w-full">
+            <div className="text-sm text-gray-600">
+              {selectedItems.length} of {pendingRedemptions.length} selected
+            </div>
+            <div className="flex gap-4">
+              <Button onClick={onClose} variant="secondary">
+                Back
+              </Button>
+              <Button
+                onClick={handleDeny}
+                disabled={loading || selectedItems.length === 0}
+                variant="secondary"
+              >
+                {loading ? "Processing..." : "Deny Selected"}
+              </Button>
+              <Button
+                onClick={handleApprove}
+                disabled={loading || selectedItems.length === 0}
+              >
+                {loading ? "Processing..." : "Approve Selected"}
+              </Button>
+            </div>
           </div>
-          <div className="flex gap-4">
-            <Button onClick={onClose} variant="secondary">
-              Back
-            </Button>
-            <Button
-              onClick={handleDeny}
-              disabled={loading || selectedItems.length === 0}
-              variant="secondary"
-            >
-              {loading ? "Processing..." : "Deny Selected"}
-            </Button>
-            <Button
-              onClick={handleApprove}
-              disabled={loading || selectedItems.length === 0}
-            >
-              {loading ? "Processing..." : "Approve Selected"}
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

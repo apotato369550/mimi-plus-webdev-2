@@ -130,7 +130,7 @@ export function AddRewardModal({ isOpen, onClose, onSave }) {
               type="number"
               value={pointsRequired}
               onChange={(e) => setPointsRequired(e.target.value)}
-              className="col-span-3 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="appearance-none col-span-3 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               placeholder="Enter points required"
               required
             />
@@ -150,7 +150,7 @@ export function AddRewardModal({ isOpen, onClose, onSave }) {
               required
             >
               <option value="">Select a category</option>
-              <option value="Snack">Snack</option>
+              <option value="Snacks">Snacks</option>
               <option value="Drinks">Drinks</option>
               <option value="School Supply">School Supply</option>
               <option value="Lifestyle">Lifestyle</option>

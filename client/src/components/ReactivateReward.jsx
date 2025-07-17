@@ -4,12 +4,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "./Label";
 import Button from "./Button";
 
-export function DeleteRewardModal({ isOpen, onClose, onDelete }) {
+export function ReactivateRewardModal({ isOpen, onClose, onReactivate }) {
   const [selectedReward, setSelectedReward] = useState("");
   const [rewards, setRewards] = useState([]);
 
   useEffect(() => {
-    // Fetch only active rewards for deletion
+    // Fetch only inactive rewards for reactivation
     const fetchRewards = async () => {
       try {
         const response = await fetch("/api/admin/rewards?showInactive=true", {
@@ -19,9 +19,9 @@ export function DeleteRewardModal({ isOpen, onClose, onDelete }) {
         });
         if (response.ok) {
           const data = await response.json();
-          // Filter rewards based on status - only show active rewards for deletion
-          const activeRewards = data.rewards.filter(reward => reward.isActive === 'active');
-          setRewards(activeRewards);
+          // Filter rewards based on status - only show inactive rewards for reactivation
+          const inactiveRewards = data.rewards.filter(reward => reward.isActive === 'inactive');
+          setRewards(inactiveRewards);
         }
       } catch (error) {
         console.error("Error fetching rewards:", error);
@@ -36,7 +36,7 @@ export function DeleteRewardModal({ isOpen, onClose, onDelete }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (selectedReward) {
-      onDelete(selectedReward);
+      onReactivate(selectedReward);
       setSelectedReward("");
     }
   };
@@ -45,15 +45,15 @@ export function DeleteRewardModal({ isOpen, onClose, onDelete }) {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Delete Reward</DialogTitle>
+          <DialogTitle>Reactivate Reward</DialogTitle>
           <DialogDescription>
-            This will deactivate the selected reward. Deactivated rewards will no longer be available for redemption but will remain in the system for record-keeping.
+            This will reactivate the selected reward. Reactivated rewards will be available for redemption again.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="reward">Select Reward to Delete</Label>
+              <Label htmlFor="reward">Select Reward to Reactivate</Label>
               <select
                 id="reward"
                 value={selectedReward}
@@ -79,14 +79,13 @@ export function DeleteRewardModal({ isOpen, onClose, onDelete }) {
             </Button>
             <Button
               type="submit"
-              variant="destructive"
               disabled={!selectedReward}
             >
-              Delete Reward
+              Reactivate Reward
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
   );
-}
+} 
