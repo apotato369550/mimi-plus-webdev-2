@@ -40,7 +40,7 @@ exports.adminVerify = (req, res, next) => {
 }
 
 exports.authenticateStaff = (req, res, next) => {
-  if (req.user && (req.user.role === 'staff' || req.user.role === 'admin')) {
+  if (req.user && req.user.role === 'staff') {
     next();
   } else {
     return res.status(403).json({ message: "Access Denied: Staff Only" });
