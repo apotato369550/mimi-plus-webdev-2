@@ -164,7 +164,4 @@ exports.quickRedeem = async (req, res) => {
   }
 };
 
-exports.recentActivity = async (req, res) => {
-  const userID = req.user.customerID;
-  const { rewardID } = req.body;
-};
+
