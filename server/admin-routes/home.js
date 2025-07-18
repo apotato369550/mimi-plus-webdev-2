@@ -7,6 +7,7 @@ const router = express.Router();
 router.get('/', verifyToken.authenticateToken, verifyToken.adminVerify, homeController.adminDashboard);
 router.get('/transactions', verifyToken.authenticateToken, verifyToken.adminVerify, homeController.getDashboardTransactions);
 router.get('/top-customers', verifyToken.authenticateToken, verifyToken.adminVerify, homeController.getTopCustomers);
+router.get('/pending-redemptions', verifyToken.authenticateToken, verifyToken.adminVerify, homeController.getPendingRedemptions);
 
 router.post('/process-pending', verifyToken.authenticateToken, verifyToken.adminVerify, homeProcessController.processPendingRedemptions);
 router.post('/process-purchase', verifyToken.authenticateToken, verifyToken.adminVerify, homeProcessController.processPurchase);

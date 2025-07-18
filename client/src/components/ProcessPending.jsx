@@ -29,7 +29,7 @@ export default function ProcessPending({ open, onClose, onApprove, selectedUser,
     setMessage("");
     try {
       const endpoint = variant === "admin" 
-        ? `/api/admin/pending-redemptions`
+        ? `/api/admin/pending-redemptions/`
         : `/api/staff/redemptions/${selectedUser.userID}?status=pending`;
 
       const response = await fetch(endpoint, {

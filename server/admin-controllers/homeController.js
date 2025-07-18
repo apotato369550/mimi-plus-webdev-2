@@ -201,5 +201,36 @@ exports.getTopCustomers = async (req, res) => {
   }
 };
 
+exports.getPendingRedemptions = async(req, res) => {
+
+ try {
+    
+    const status = req.query.status || 'all';
+    //console.log("ID:", userId);
+    let query = `
+        SELECT 
+        r.redeemID,
+        r.dateRedeemed,
+        u.name AS customerName,
+        rew.rewardName,
+        r.pointsUsed,
+        r.redeemStatus
+      FROM redemption r
+      JOIN users u ON r.userID = u.userID
+      JOIN rewards rew ON r.rewardID = rew.rewardID
+      WHERE r.redeemStatus = 'pending'
+      ORDER BY r.dateRedeemed DESC`;
+
+    const pendingRedemptions = await queryAsync(query);
+
+    res.status(200).json({
+      pendingRedemptions,
+      total: pendingRedemptions.length
+    });
+  } catch (error) {
+    console.error("Error fetching pending redemptions:", error);
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
 
 
