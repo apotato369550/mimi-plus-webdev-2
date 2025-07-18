@@ -135,7 +135,7 @@ export default function AdminDashboard() {
     setTransactionsLoading(true);
     setTransactionsError(null);
     try {
-      const response = await fetch("/api/admin/transactions?limit=10", {
+      const response = await fetch("/api/admin/recent-transactions", {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
