@@ -5,7 +5,7 @@ const verifyToken = require("../middleware/authMiddleware");
 const router = express.Router();
 
 router.get('/', verifyToken.authenticateToken, verifyToken.adminVerify, homeController.adminDashboard);
-router.get('/transactions', verifyToken.authenticateToken, verifyToken.adminVerify, homeController.getDashboardTransactions);
+router.get('/recent-transactions', verifyToken.authenticateToken, verifyToken.adminVerify, homeController.getDashboardTransactions);
 router.get('/top-customers', verifyToken.authenticateToken, verifyToken.adminVerify, homeController.getTopCustomers);
 router.get('/pending-redemptions', verifyToken.authenticateToken, verifyToken.adminVerify, homeController.getPendingRedemptions);
 
