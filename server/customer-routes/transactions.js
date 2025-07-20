@@ -1,5 +1,5 @@
 const express = require("express");
-const transactionController = require("../controllers/transactionController");
+const transactionController = require("../customer-controllers/transactionController");
 const verifyToken = require("../middleware/authMiddleware");
 const router = express.Router();
 

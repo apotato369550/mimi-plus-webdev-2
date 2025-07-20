@@ -24,11 +24,11 @@ app.use("/api/staff", require("./staff-routes/staff"));
 
 
 //Customer Routes
-app.use("/api/home", require("./routes/home"));
-app.use("/api/transactions", require("./routes/transactions"));
-app.use("/api/rewards", require("./routes/rewards"));
-app.use("/api/auth", require("./routes/authentication"));
-app.use("/api/account", require("./routes/account"));
+app.use("/api/home", require("./customer-routes/home"));
+app.use("/api/transactions", require("./customer-routes/transactions"));
+app.use("/api/rewards", require("./customer-routes/rewards"));
+app.use("/api/auth", require("./customer-routes/authentication"));
+app.use("/api/account", require("./customer-routes/account"));
 
 const PORT = process.env.PORT || 5002;
 
