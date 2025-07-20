@@ -10,7 +10,7 @@ exports.getAccountDetails = async(req, res)=>{
 
   try {
 
-    const userID = req.user.id;
+    const userID = req.user.userID;
 
     const user = await queryAsync('Select userID, name, email FROM users WHERE userID = ?', [userID]);
 
