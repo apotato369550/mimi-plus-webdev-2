@@ -77,3 +77,101 @@ exports.deleteCustomer = async (req, res) => {
   }
 };
 
+exports.updateCustomerName = async(req, res)=> {
+
+  try{
+
+    const { userID } = req.params;
+    const { name } = req.body;
+
+
+    if(!userID){
+      console.log("customerid: ", req.params);
+      return res.status(400).json({ message: 'Invalid customer id'});
+    }
+
+    if(!name || typeof name !== 'string'){
+      return res.status(400).json({
+        message: 'Name is required and must be a string'
+      });
+    }
+
+    const trimmedName = name.trim();
+
+    if(!trimmedName){
+      return res.status(400).json({
+        message: 'Name cannot be empty or just whitespace'
+      });
+    }
+
+    const result = await queryAsync('UPDATE users SET name = ? WHERE userID = ?', [trimmedName, userID]);
+    
+    if(result.affectedRows === 0){
+      return res.status(404).json({
+        message: 'Customer not found'
+      })
+    }
+
+    res.status(200).json({
+      message: 'Customer name updated successfully',
+      customerID: userID,
+      newName: trimmedName
+    });
+  } catch(error){
+
+    console.error('Error updating customer name:', error);
+    return res.status(500).json({
+      message: 'Server error',
+      error: error.message
+    })
+  }
+}
+
+exports.updateCustomerEmail = async(req, res)=>{
+  try{
+
+    const { userID } = req.params;
+    const { email } = req.body;
+
+
+    if(!userID){
+      
+      return res.status(400).json({ message: 'Invalid customer id'});
+    }
+
+    if(!email || typeof email !== 'string'){
+      return res.status(400).json({
+        message: 'Name is required and must be a string'
+      });
+    }
+
+    const trimmedEmail = email.trim();
+
+    if(!trimmedEmail){
+      return res.status(400).json({
+        message: 'Name cannot be empty or just whitespace'
+      });
+    }
+
+    const result = await queryAsync('UPDATE users SET email = ? WHERE userID = ?', [trimmedEmail, userID]);
+    
+    if(result.affectedRows === 0){
+      return res.status(404).json({
+        message: 'Customer not found'
+      })
+    }
+
+    res.status(200).json({
+      message: 'Customer email updated successfully',
+      customerID: userID,
+      newEmail: trimmedEmail
+    });
+  } catch(error){
+
+    console.error('Error updating customer email:', error);
+    return res.status(500).json({
+      message: 'Server error',
+      error: error.message
+    })
+  }
+}
