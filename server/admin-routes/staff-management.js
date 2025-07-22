@@ -6,6 +6,7 @@ const router = express.Router();
 
 
 router.get('/', verifyToken.authenticateToken, verifyToken.adminVerify, staffController.viewAllStaff);
+router.post('/add-staff', verifyToken.authenticateToken, verifyToken.adminVerify, staffController.addStaff);
 router.delete('/staff/:id', verifyToken.authenticateToken, verifyToken.adminVerify, staffController.deleteStaff);
 
 module.exports = router;
