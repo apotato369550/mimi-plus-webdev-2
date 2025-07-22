@@ -1,6 +1,6 @@
 const db = require("../database/dbconn");
 const { queryAsync } = require("../database/utils");
-
+const bcrypt = require('bcrypt');
 
 
 
@@ -78,4 +78,42 @@ exports.deleteStaff = async (req, res) => {
   }
 };
 
+exports.addStaff = async(req, res) => {
 
+  const {name, email, password, role} = req.body;
+
+  if(!name || !email || !password || role){
+
+    return res.status(400).json({ message: "All fields are required"});
+
+  }
+
+  try{
+
+    const existingStaff = await queryAsync("SELECT * FROM users WHERE email = ?", [email]);
+    
+
+    if(existingStaff.length > 0){
+
+      return res.status(400).json({message: 'Email already exists'});
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const insertStaff = `INSERT INTO users (name, email, password, role)
+                         VALUES (?, ?, ?, ?)`;
+
+    const result = await queryAsync(insertStaff, [name, email, hashedPassword, 'staff']);
+
+    res.status(201).json({
+      message: "Staff member added successfully",
+      userID: result.insertId 
+
+    })
+  } catch(error){
+
+    console.error("Error adding staff", error);
+    res.status(500).json({ message: "Server error", error: error.message});
+  }
+
+}
