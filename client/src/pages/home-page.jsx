@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { toast } from "sonner";
 import Header from "../components/Header.jsx";
 import MetricCard from "../components/MetricCard.jsx";
 import HomepageRewardCard from "../components/HomepageRewardCard.jsx";
@@ -11,8 +12,6 @@ import RecentTransactions from "../components/RecentTransactions.jsx";
 export default function HomePage() {
   const [points, setPoints] = useState(null);
   const [rewards, setRewards] = useState([]);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
   const [showQRCode, setShowQRCode] = useState(false);
   const [userName, setUserName] = useState("");
 
@@ -23,7 +22,7 @@ export default function HomePage() {
       window.location.href = "/admindashboard";
       return;
     }
-    
+
     // Set user name from local storage
     setUserName(user.name || "");
 
@@ -35,7 +34,7 @@ export default function HomePage() {
 
         if (!token) {
           console.log("No token found, redirecting to login");
-          setError("No authentication token found. Please log in.");
+          toast.error("No authentication token found. Please log in.");
           setTimeout(() => {
             window.location.href = "/login";
           }, 2000);
@@ -63,23 +62,20 @@ export default function HomePage() {
           lastMonthMetrics,
         });
         setRewards(quickRewards || []);
-        setError("");
       } catch (error) {
         console.error("Failed to fetch home data:", error);
         if (error.response?.status === 401 || error.response?.status === 403) {
           console.log("Authentication failed, redirecting to login");
-          setError("Authentication failed. Please log in again.");
+          toast.error("Authentication failed. Please log in again.");
           localStorage.removeItem("token");
           localStorage.removeItem("user");
           setTimeout(() => {
             window.location.href = "/login";
           }, 2000);
         } else if (error.code === "ERR_NETWORK") {
-          setError(
-            "Cannot connect to server. Please check if the server is running.",
-          );
+          toast.error("Cannot connect to server. Please check if the server is running.");
         } else {
-          setError(`Error: ${error.response?.data?.message || error.message}`);
+          toast.error(`Error: ${error.response?.data?.message || error.message}`);
         }
       }
     };
@@ -87,7 +83,6 @@ export default function HomePage() {
   }, []);
 
   const handleRedeem = async (rewardID) => {
-    setMessage("");
     try {
       const res = await axios.post(
         "/api/home/redeem",
@@ -96,7 +91,7 @@ export default function HomePage() {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         },
       );
-      setMessage(res.data.message);
+      toast.success(res.data.message);
 
       // Refresh home data to update points
       const homeRes = await axios.get("/api/home", {
@@ -116,13 +111,8 @@ export default function HomePage() {
         lastMonthMetrics,
       });
       setRewards(quickRewards || []);
-
-      // Clear success message after 3 seconds
-      setTimeout(() => {
-        setMessage("");
-      }, 3000);
     } catch (err) {
-      setMessage(err.response?.data?.message || "Redeem failed");
+      toast.error(err.response?.data?.message || "Redeem failed");
     }
   };
 
@@ -141,14 +131,6 @@ export default function HomePage() {
             </div>
           </Button>
         </div>
-
-        {message && (
-          <div className="my-2 text-center text-sm text-red-600">{message}</div>
-        )}
-
-        {error && (
-          <div className="my-2 text-center text-sm text-red-600">{error}</div>
-        )}
 
         {points && (
           <div className="flex justify-between gap-2 w-full h-full">

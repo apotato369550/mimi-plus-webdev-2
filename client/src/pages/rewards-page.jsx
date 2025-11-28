@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { toast } from "sonner";
 import Header from "../components/Header.jsx";
 import Content from "../components/Content.jsx";
 import RewardCard from "../components/RewardCard.jsx";
@@ -11,7 +12,6 @@ export default function RewardsPage() {
   const [rewards, setRewards] = useState([]);
   const [userPoints, setUserPoints] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [message, setMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
   const categories = ["All", "Snacks", "Drinks", "School Supply", "Lifestyle"];
@@ -65,15 +65,17 @@ export default function RewardsPage() {
       console.error("Failed to fetch rewards:", error);
       console.error("Error details:", error.response?.data);
       if (error.response?.status === 401 || error.response?.status === 403) {
+        toast.error("Authentication failed. Please log in again.");
         localStorage.removeItem("token");
         localStorage.removeItem("user");
         window.location.href = "/login";
+      } else {
+        toast.error("Failed to load rewards. Please try again.");
       }
     }
   };
 
   const handleRedeem = async (rewardID) => {
-    setMessage("");
     try {
       const token = localStorage.getItem("token");
       const res = await axios.post(
@@ -84,17 +86,12 @@ export default function RewardsPage() {
         },
       );
 
-      setMessage(res.data.message);
+      toast.success(res.data.message);
 
       // Refresh rewards data to update points
       await fetchRewards();
-
-      // Clear success message after 3 seconds
-      setTimeout(() => {
-        setMessage("");
-      }, 3000);
     } catch (err) {
-      setMessage(err.response?.data?.message || "Redeem failed");
+      toast.error(err.response?.data?.message || "Redeem failed");
     }
   };
 
@@ -122,10 +119,6 @@ export default function RewardsPage() {
             </p>
           </div>
         </div>
-
-        {message && (
-          <div className="my-2 text-center text-sm text-red-600">{message}</div>
-        )}
 
         <div className="flex justify-between w-full">
           <div className="flex gap-2">
